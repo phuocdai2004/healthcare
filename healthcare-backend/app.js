@@ -17,7 +17,7 @@ const prescriptionRoutes = require('./src/routes/prescription.routes');
 const labRoutes = require('./src/routes/lab.routes');
 const billingRoutes = require('./src/routes/billing.routes');
 const consultationRoutes = require('./src/routes/consultation.routes');
-const superAdminRoutes = require('../healthcare-backend/src/routes/superAdmin.routes');
+const superAdminRoutes = require('./src/routes/superAdmin.routes');
 
 /**
  * ỨNG DỤNG EXPRESS CHÍNH
