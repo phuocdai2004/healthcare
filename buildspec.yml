@@ -1,15 +1,20 @@
 ﻿version: 0.2
 
+env:
+  variables:
+    AWS_ACCOUNT_ID: "523826890357"
+    AWS_DEFAULT_REGION: "ap-southeast-2"
+    REPOSITORY_URI_BACKEND: "523826890357.dkr.ecr.ap-southeast-2.amazonaws.com/healthcare-backend"
+    REPOSITORY_URI_FRONTEND: "523826890357.dkr.ecr.ap-southeast-2.amazonaws.com/healthcare-frontend"
+
 phases:
   pre_build:
     commands:
       - echo "Logging in to Amazon ECR..."
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
-      - REPOSITORY_URI_BACKEND=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/healthcare-backend
-      - REPOSITORY_URI_FRONTEND=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/healthcare-frontend
       - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
       - IMAGE_TAG=${COMMIT_HASH:=latest}
-      - echo "Building images with tags - Backend:$IMAGE_TAG Frontend:$IMAGE_TAG"
+      - echo "Building images with tag: $IMAGE_TAG"
 
   build:
     commands:
