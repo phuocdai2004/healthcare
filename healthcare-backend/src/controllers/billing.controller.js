@@ -1,5 +1,6 @@
 // src/controllers/billing.controller.js
 const billingService = require('../services/billing.service');
+const PaymentQRService = require('../services/paymentQR.service');
 
 class BillingController {
   async create(req, res, next) {
@@ -51,6 +52,38 @@ class BillingController {
       next(error);
     }
   }
+
+  async generatePaymentQR(req, res, next) {
+    try {
+      const { billId } = req.params;
+      const bill = await billingService.getById(billId);
+
+      if (!bill) {
+        return res.status(404).json({
+          success: false,
+          message: 'Hóa đơn không tồn tại'
+        });
+      }
+
+      const paymentInfo = await PaymentQRService.createPaymentInfo({
+        billId: bill._id,
+        amount: bill.totalAmount,
+        patientName: bill.patientId?.fullName || 'Unknown',
+        bankCode: 'VCB',
+        accountNo: process.env.BANK_ACCOUNT_NO || '1234567890',
+        accountName: process.env.HOSPITAL_NAME || 'Healthcare Hospital'
+      });
+
+      res.json({
+        success: true,
+        message: 'Tạo mã QR thanh toán thành công',
+        data: paymentInfo
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new BillingController();
+

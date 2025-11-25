@@ -29,6 +29,13 @@ router.get(
   billingController.getById
 );
 
+// GET /api/billing/:billId/qr - Tạo mã QR thanh toán
+router.get(
+  '/:billId/qr',
+  requirePermission(PERMISSIONS.VIEW_BILLS),
+  billingController.generatePaymentQR
+);
+
 // PUT /api/billing/:billId/pay - Thanh toán
 router.put(
   '/:billId/pay',
