@@ -1,0 +1,40 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - REPOSITORY_URI_BACKEND=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/healthcare-backend
+      - REPOSITORY_URI_FRONTEND=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/healthcare-frontend
+      - COMMIT_HASH=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_TAG=${COMMIT_HASH:=latest}
+
+  build:
+    commands:
+      - echo "Building backend Docker image..."
+      - docker build -t $REPOSITORY_URI_BACKEND:$IMAGE_TAG -t $REPOSITORY_URI_BACKEND:latest -f healthcare-backend/Dockerfile healthcare-backend/
+      - echo "Building frontend Docker image..."
+      - docker build -t $REPOSITORY_URI_FRONTEND:$IMAGE_TAG -t $REPOSITORY_URI_FRONTEND:latest -f healthcare-frontend/Dockerfile healthcare-frontend/
+
+  post_build:
+    commands:
+      - echo "Pushing backend Docker image..."
+      - docker push $REPOSITORY_URI_BACKEND:$IMAGE_TAG
+      - docker push $REPOSITORY_URI_BACKEND:latest
+      - echo "Pushing frontend Docker image..."
+      - docker push $REPOSITORY_URI_FRONTEND:$IMAGE_TAG
+      - docker push $REPOSITORY_URI_FRONTEND:latest
+      - echo "Writing image definitions file..."
+      - printf '[{"name":"healthcare-backend","imageUri":"%s"},{"name":"healthcare-frontend","imageUri":"%s"}]' $REPOSITORY_URI_BACKEND:$IMAGE_TAG $REPOSITORY_URI_FRONTEND:$IMAGE_TAG > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
+  discard-paths: yes
+
+cache:
+  paths:
+    - '/root/.npm/**/*'
+    - 'healthcare-backend/node_modules/**/*'
+    - 'healthcare-frontend/node_modules/**/*'
