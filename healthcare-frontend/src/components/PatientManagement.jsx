@@ -70,7 +70,7 @@ const PatientManagement = () => {
   // Fetch patients
   useEffect(() => {
     fetchPatients();
-  }, [pagination.current, pagination.pageSize, searchText, filterStatus]);
+  }, [pagination.current, pagination.pageSize, searchText]);
 
   const fetchPatients = async () => {
     try {
@@ -78,8 +78,7 @@ const PatientManagement = () => {
       const params = {
         page: pagination.current,
         limit: pagination.pageSize,
-        ...(searchText && { search: searchText }),
-        ...(filterStatus !== 'all' && { status: filterStatus })
+        ...(searchText && { keyword: searchText })
       };
 
       const response = await apiClient.get('/patients/search', { params });
@@ -95,8 +94,8 @@ const PatientManagement = () => {
         // Calculate stats
         setStats({
           total: response.data.data?.pagination?.totalItems || 0,
-          active: patientsData.filter(p => p.status === 'ACTIVE').length,
-          admitted: patientsData.filter(p => p.admissionStatus === 'ADMITTED').length
+          active: patientsData.length,
+          admitted: 0
         });
       }
     } catch (err) {

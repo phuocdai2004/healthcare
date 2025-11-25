@@ -86,16 +86,17 @@ class PatientController {
    */
   async getPatientDemographics(req, res, next) {
     try {
-      const { patientId } = req.params;
+      // Route param is 'patientId' but contains userId from the API call
+      const userId = req.params.patientId;
       
-      console.log('📋 [PATIENT] Getting demographics for:', patientId);
+      console.log('📋 [PATIENT] Getting demographics for userId:', userId);
 
-      const demographics = await patientService.getPatientDemographics(patientId);
+      const demographics = await patientService.getPatientDemographics(userId);
 
       // 🎯 AUDIT LOG
       await auditLog(AUDIT_ACTIONS.PATIENT_VIEW, {
         resource: 'Patient',
-        resourceId: patientId,
+        resourceId: userId,
         category: 'DEMOGRAPHICS'
       })(req, res, () => {});
 
@@ -115,13 +116,13 @@ class PatientController {
    */
   async updatePatientDemographics(req, res, next) {
     try {
-      const { patientId } = req.params;
+      const userId = req.params.patientId;
       const updateData = req.body;
       
-      console.log('✏️ [PATIENT] Updating demographics for:', patientId);
+      console.log('✏️ [PATIENT] Updating demographics for userId:', userId);
 
       const updatedPatient = await patientService.updatePatientDemographics(
-        patientId, 
+        userId, 
         updateData,
         req.user._id
       );
@@ -129,8 +130,8 @@ class PatientController {
       // 🎯 AUDIT LOG
       await auditLog(AUDIT_ACTIONS.PATIENT_UPDATE, {
         resource: 'Patient',
-        resourceId: patientId,
-        category: 'DEMOGRAPHICS',
+        resourceId: userId,
+        category: 'INSURANCE',
         metadata: { updatedFields: Object.keys(updateData) }
       })(req, res, () => {});
 
@@ -150,13 +151,13 @@ class PatientController {
    */
   async admitPatient(req, res, next) {
     try {
-      const { patientId } = req.params;
+      const userId = req.params.patientId;
       const admissionData = req.body;
       
-      console.log('🏥 [PATIENT] Admitting patient:', patientId);
+      console.log('🏥 [PATIENT] Admitting patient userId:', userId);
 
       const admission = await patientService.admitPatient(
-        patientId, 
+        userId, 
         admissionData,
         req.user._id
       );
@@ -164,7 +165,7 @@ class PatientController {
       // 🎯 AUDIT LOG
       await auditLog(AUDIT_ACTIONS.PATIENT_UPDATE, {
         resource: 'Patient',
-        resourceId: patientId,
+        resourceId: userId,
         category: 'ADMISSION',
         metadata: { 
           department: admissionData.department,
@@ -188,13 +189,13 @@ class PatientController {
    */
   async dischargePatient(req, res, next) {
     try {
-      const { patientId } = req.params;
+      const userId = req.params.patientId;
       const dischargeData = req.body;
       
-      console.log('🎉 [PATIENT] Discharging patient:', patientId);
+      console.log('🎉 [PATIENT] Discharging patient userId:', userId);
 
       const discharge = await patientService.dischargePatient(
-        patientId, 
+        userId, 
         dischargeData,
         req.user._id
       );
@@ -202,7 +203,7 @@ class PatientController {
       // 🎯 AUDIT LOG
       await auditLog(AUDIT_ACTIONS.PATIENT_UPDATE, {
         resource: 'Patient',
-        resourceId: patientId,
+        resourceId: userId,
         category: 'DISCHARGE',
         metadata: { 
           dischargeReason: dischargeData.dischargeReason,
@@ -226,16 +227,16 @@ class PatientController {
    */
   async getPatientInsurance(req, res, next) {
     try {
-      const { patientId } = req.params;
+      const userId = req.params.patientId;
       
-      console.log ('🏦 [PATIENT] Getting insurance for:', patientId);
+      console.log ('🏦 [PATIENT] Getting insurance for userId:', userId);
 
-      const insurance = await patientService.getPatientInsurance(patientId);
+      const insurance = await patientService.getPatientInsurance(userId);
 
       // 🎯 AUDIT LOG - Insurance data is sensitive
       await auditLog(AUDIT_ACTIONS.PATIENT_VIEW, {
         resource: 'Patient',
-        resourceId: patientId,
+        resourceId: userId,
         category: 'INSURANCE'
       })(req, res, () => {});
 
@@ -255,13 +256,13 @@ class PatientController {
    */
   async updatePatientInsurance(req, res, next) {
     try {
-      const { patientId } = req.params;
+      const userId = req.params.patientId;
       const insuranceData = req.body;
       
-      console.log('💳 [PATIENT] Updating insurance for:', patientId);
+      console.log('💳 [PATIENT] Updating insurance for userId:', userId);
 
       const updatedInsurance = await patientService.updatePatientInsurance(
-        patientId, 
+        userId, 
         insuranceData,
         req.user._id
       );
@@ -269,7 +270,7 @@ class PatientController {
       // 🎯 AUDIT LOG
       await auditLog(AUDIT_ACTIONS.PATIENT_UPDATE, {
         resource: 'Patient',
-        resourceId: patientId,
+        resourceId: userId,
         category: 'INSURANCE',
         metadata: { 
           provider: insuranceData.provider,

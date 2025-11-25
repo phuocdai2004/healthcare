@@ -297,6 +297,41 @@ class AppointmentService {
   }
 
   /**
+   * 🎯 XÁC NHẬN LỊCH HẸN VÀ TẠO HÓA ĐƠN
+   */
+  async confirmAppointment(appointmentId) {
+    try {
+      const billingService = require('./billing.service');
+      
+      const appointment = await Appointment.findOne({ appointmentId });
+      
+      if (!appointment) {
+        throw new AppError('Không tìm thấy lịch hẹn', 404, ERROR_CODES.APPOINTMENT_NOT_FOUND);
+      }
+
+      // 🎯 CẬP NHẬT TRẠNG THÁI
+      appointment.status = 'CONFIRMED';
+      await appointment.save();
+
+      // 🎯 TẠO HÓA ĐƠN TỰ ĐỘNG
+      await billingService.createBillFromAppointment(appointment._id);
+
+      // 🎯 LẤY KẾT QUẢ MỚI NHẤT
+      const confirmedAppointment = await Appointment.findOne({ appointmentId })
+        .populate('patientId', 'name email phone')
+        .populate('doctorId', 'name email specialization')
+        .populate('billId');
+
+      console.log('✅ [SERVICE] Appointment confirmed and bill created:', appointmentId);
+      return confirmedAppointment;
+
+    } catch (error) {
+      console.error('❌ [SERVICE] Confirm appointment failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
    * 🎯 TẠO LỊCH LÀM VIỆC
    */
   async createSchedule(scheduleData) {

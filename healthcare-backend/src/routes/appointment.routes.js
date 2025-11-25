@@ -74,6 +74,14 @@ router.post(
   appointmentController.cancelAppointment
 );
 
+// 🎯 XÁC NHẬN LỊCH HẸN VÀ TẠO HÓA ĐƠN
+router.post(
+  '/:appointmentId/confirm',
+  requireRole(ROLES.RECEPTIONIST, ROLES.HOSPITAL_ADMIN, ROLES.PATIENT),
+  requirePermission(PERMISSIONS.APPOINTMENT_UPDATE),
+  appointmentController.confirmAppointment
+);
+
 // 🎯 TẠO LỊCH LÀM VIỆC
 router.post(
   '/schedules',

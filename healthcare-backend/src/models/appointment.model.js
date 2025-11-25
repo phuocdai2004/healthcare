@@ -83,6 +83,12 @@ const appointmentSchema = new mongoose.Schema({
     notes: String
   },
   
+  // Liên kết hóa đơn
+  billId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Bill'
+  },
+  
   // Ghi chú
   notes: String,
   preparationInstructions: String,

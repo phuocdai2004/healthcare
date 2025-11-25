@@ -51,8 +51,7 @@ class PatientService {
         weight: patientData.weight,
         allergies: patientData.allergies || [],
         chronicConditions: patientData.chronicConditions || [],
-        insurance: patientData.insurance || {},
-        createdBy: patientData.createdBy
+        insurance: patientData.insurance || {}
       };
 
       const patient = new Patient(patientProfile);
@@ -60,8 +59,7 @@ class PatientService {
 
       // 🎯 POPULATE KẾT QUẢ
       const result = await Patient.findById(patient._id)
-        .populate('userId', 'name email phone dateOfBirth gender address')
-        .populate('createdBy', 'name email');
+        .populate('userId', 'name email phone dateOfBirth gender address');
 
       console.log('✅ [SERVICE] Patient registered successfully:', patientId);
       return result;
@@ -137,11 +135,11 @@ class PatientService {
   /**
    * 🎯 LẤY THÔNG TIN NHÂN KHẨU
    */
-  async getPatientDemographics(patientId) {
+  async getPatientDemographics(userId) {
     try {
-      const patient = await Patient.findOne({ patientId })
-        .populate('userId', 'name email phone dateOfBirth gender address identification')
-        .populate('createdBy', 'name email');
+      // Query by userId (which is passed from the API endpoint)
+      const patient = await Patient.findOne({ userId })
+        .populate('userId', 'name email phone dateOfBirth gender address identification');
 
       if (!patient) {
         throw new AppError('Không tìm thấy bệnh nhân', 404, ERROR_CODES.PATIENT_NOT_FOUND);
@@ -178,9 +176,9 @@ class PatientService {
   /**
    * 🎯 CẬP NHẬT THÔNG TIN NHÂN KHẨU
    */
-  async updatePatientDemographics(patientId, updateData, updatedBy) {
+  async updatePatientDemographics(userId, updateData, updatedBy) {
     try {
-      const patient = await Patient.findOne({ patientId }).populate('userId');
+      const patient = await Patient.findOne({ userId }).populate('userId');
       
       if (!patient) {
         throw new AppError('Không tìm thấy bệnh nhân', 404, ERROR_CODES.PATIENT_NOT_FOUND);
@@ -215,11 +213,10 @@ class PatientService {
       }
 
       // 🎯 LẤY KẾT QUẢ MỚI NHẤT
-      const updatedPatient = await Patient.findOne({ patientId })
-        .populate('userId', 'name email phone dateOfBirth gender address')
-        .populate('createdBy', 'name email');
+      const updatedPatient = await Patient.findOne({ userId })
+        .populate('userId', 'name email phone dateOfBirth gender address');
 
-      console.log('✅ [SERVICE] Demographics updated for:', patientId);
+      console.log('✅ [SERVICE] Demographics updated for:', userId);
       return updatedPatient;
 
     } catch (error) {
@@ -231,9 +228,9 @@ class PatientService {
   /**
    * 🎯 NHẬP VIỆN BỆNH NHÂN
    */
-  async admitPatient(patientId, admissionData, admittedBy) {
+  async admitPatient(userId, admissionData, admittedBy) {
     try {
-      const patient = await Patient.findOne({ patientId });
+      const patient = await Patient.findOne({ userId });
       
       if (!patient) {
         throw new AppError('Không tìm thấy bệnh nhân', 404, ERROR_CODES.PATIENT_NOT_FOUND);
@@ -260,7 +257,7 @@ class PatientService {
       patient.admission = admission;
       await patient.save();
 
-      console.log('✅ [SERVICE] Patient admitted:', patientId);
+      console.log('✅ [SERVICE] Patient admitted:', userId);
       return patient;
 
     } catch (error) {
@@ -272,9 +269,9 @@ class PatientService {
   /**
    * 🎯 XUẤT VIỆN BỆNH NHÂN
    */
-  async dischargePatient(patientId, dischargeData, dischargedBy) {
+  async dischargePatient(userId, dischargeData, dischargedBy) {
     try {
-      const patient = await Patient.findOne({ patientId });
+      const patient = await Patient.findOne({ userId });
       
       if (!patient) {
         throw new AppError('Không tìm thấy bệnh nhân', 404, ERROR_CODES.PATIENT_NOT_FOUND);
@@ -296,7 +293,7 @@ class PatientService {
 
       await patient.save();
 
-      console.log('✅ [SERVICE] Patient discharged:', patientId);
+      console.log('✅ [SERVICE] Patient discharged:', userId);
       return patient;
 
     } catch (error) {
@@ -308,9 +305,9 @@ class PatientService {
   /**
    * 🎯 LẤY THÔNG TIN BẢO HIỂM
    */
-  async getPatientInsurance(patientId) {
+  async getPatientInsurance(userId) {
     try {
-      const patient = await Patient.findOne({ patientId });
+      const patient = await Patient.findOne({ userId });
       
       if (!patient) {
         throw new AppError('Không tìm thấy bệnh nhân', 404, ERROR_CODES.PATIENT_NOT_FOUND);
@@ -331,9 +328,9 @@ class PatientService {
   /**
    * 🎯 CẬP NHẬT THÔNG TIN BẢO HIỂM
    */
-  async updatePatientInsurance(patientId, insuranceData, updatedBy) {
+  async updatePatientInsurance(userId, insuranceData, updatedBy) {
     try {
-      const patient = await Patient.findOne({ patientId });
+      const patient = await Patient.findOne({ userId });
       
       if (!patient) {
         throw new AppError('Không tìm thấy bệnh nhân', 404, ERROR_CODES.PATIENT_NOT_FOUND);
@@ -349,7 +346,7 @@ class PatientService {
 
       await patient.save();
 
-      console.log('✅ [SERVICE] Insurance updated for:', patientId);
+      console.log('✅ [SERVICE] Insurance updated for:', userId);
       return {
         patientId: patient.patientId,
         insurance: patient.insurance,

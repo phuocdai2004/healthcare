@@ -1,42 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  Layout,
-  Card,
-  Row,
-  Col,
-  Statistic,
-  Menu,
-  Button,
-  message,
-  Spin,
-  Drawer,
-  Descriptions,
-  Badge,
-  Tag,
-  Table,
-  Space,
-  Modal,
-  Form,
-  Input,
-  DatePicker,
-  Select
-} from 'antd';
-import {
-  LogoutOutlined,
-  HomeOutlined,
-  FileTextOutlined,
-  CalendarOutlined,
-  MedicineBoxOutlined,
-  UserOutlined,
-  PhoneOutlined,
-  MailOutlined,
-  CreditCardOutlined,
-  HistoryOutlined
-} from '@ant-design/icons';
+import { Layout, Menu, Button, message, Spin, Space, Avatar } from 'antd';
+import { LogoutOutlined, HomeOutlined, FileTextOutlined, CalendarOutlined, MedicineBoxOutlined, MenuFoldOutlined, MenuUnfoldOutlined, UserOutlined } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../utils/api';
-import dayjs from 'dayjs';
+import PatientPersonalInfo from '../components/PatientPersonalInfo';
+import AppointmentsSection from '../components/AppointmentsSection';
+import MedicalRecordsSection from '../components/MedicalRecordsSection';
+import PrescriptionsSection from '../components/PrescriptionsSection';
+import BillingSection from '../components/BillingSection';
+import AppointmentBooking from '../components/AppointmentBooking';
 
 const { Header, Sider, Content } = Layout;
 
@@ -46,467 +19,105 @@ const PatientDashboard = () => {
   const [collapsed, setCollapsed] = useState(false);
   const [selectedKey, setSelectedKey] = useState('1');
   const [loading, setLoading] = useState(false);
-  const [patientData, setPatientData] = useState(null);
-  const [medicalRecords, setMedicalRecords] = useState([]);
-  const [appointments, setAppointments] = useState([]);
-  const [prescriptions, setPrescriptions] = useState([]);
-  const [bills, setBills] = useState([]);
-  const [drawerVisible, setDrawerVisible] = useState(false);
-  const [selectedRecord, setSelectedRecord] = useState(null);
-  const [form] = Form.useForm();
+  const [data, setData] = useState({ 
+    patient: null, 
+    records: [], 
+    appointments: [], 
+    prescriptions: [], 
+    bills: [] 
+  });
 
   useEffect(() => {
-    fetchPatientData();
-  }, [selectedKey]);
+    if (user?._id) {
+      fetchAllData();
+    }
+  }, [user?._id]);
 
-  const fetchPatientData = async () => {
+  const fetchAllData = async () => {
     try {
       setLoading(true);
       
-      // Fetch patient demographics
-      const demoResponse = await apiClient.get(`/patients/${user._id}/demographics`);
-      setPatientData(demoResponse.data.data);
+      // Fetch all data in parallel
+      const [demoRes, recordsRes, aptsRes, rxRes, billsRes] = await Promise.allSettled([
+        apiClient.get(`/patients/${user._id}/demographics`),
+        apiClient.get(`/patients/${user._id}/medical-records`),
+        apiClient.get(`/patients/${user._id}/appointments`),
+        apiClient.get(`/patients/${user._id}/prescriptions`),
+        apiClient.get(`/bills?patientId=${user._id}`)
+      ]);
 
-      // Fetch medical records
-      if (selectedKey === '2') {
-        const recordsResponse = await apiClient.get(`/patients/${user._id}/medical-records`);
-        setMedicalRecords(recordsResponse.data.data?.records || []);
-      }
+      // Process results safely
+      const newData = {
+        patient: demoRes.status === 'fulfilled' ? demoRes.value.data.data : null,
+        records: recordsRes.status === 'fulfilled' ? recordsRes.value.data.data?.records || [] : [],
+        appointments: aptsRes.status === 'fulfilled' ? aptsRes.value.data.data?.appointments || [] : [],
+        prescriptions: rxRes.status === 'fulfilled' ? rxRes.value.data.data?.prescriptions || [] : [],
+        bills: billsRes.status === 'fulfilled' ? billsRes.value.data.data?.bills || [] : []
+      };
 
-      // Fetch appointments
-      if (selectedKey === '3') {
-        const appointmentsResponse = await apiClient.get(`/patients/${user._id}/appointments`);
-        setAppointments(appointmentsResponse.data.data?.appointments || []);
-      }
-
-      // Fetch prescriptions
-      if (selectedKey === '4') {
-        const prescriptionsResponse = await apiClient.get(`/patients/${user._id}/prescriptions`);
-        setPrescriptions(prescriptionsResponse.data.data?.prescriptions || []);
-      }
-
-      // Fetch bills/invoices
-      if (selectedKey === '5.5') {
-        const billsResponse = await apiClient.get(`/bills?patientId=${user._id}`);
-        setBills(billsResponse.data.data?.bills || []);
-      }
+      setData(newData);
     } catch (err) {
-      console.error('Error fetching patient data:', err);
+      console.error('Error fetching data:', err);
+      message.error('Lỗi tải dữ liệu. Vui lòng tải lại trang.');
     } finally {
       setLoading(false);
     }
   };
 
   const handleLogout = async () => {
-    await logout();
-    navigate('/superadmin/login');
+    try {
+      await apiClient.post('/auth/logout');
+      logout();
+      message.success('Đã đăng xuất');
+      navigate('/login');
+    } catch (err) {
+      message.error('Lỗi đăng xuất');
+    }
   };
 
   const menuItems = [
-    {
-      key: '1',
-      icon: <HomeOutlined />,
-      label: 'Trang chủ'
-    },
-    {
-      key: '2',
-      icon: <FileTextOutlined />,
-      label: 'Hồ sơ y tế'
-    },
-    {
-      key: '3',
-      icon: <CalendarOutlined />,
-      label: 'Lịch hẹn'
-    },
-    {
-      key: '4',
-      icon: <MedicineBoxOutlined />,
-      label: 'Đơn thuốc'
-    },
-    {
-      key: '5',
-      icon: <CreditCardOutlined />,
-      label: 'Bảo hiểm'
-    },
-    {
-      key: '5.5',
-      icon: <HistoryOutlined />,
-      label: 'Hóa đơn'
-    },
-    {
-      key: '6',
-      icon: <UserOutlined />,
-      label: 'Thông tin cá nhân'
-    }
-  ];
-
-  const medicalRecordsColumns = [
-    {
-      title: 'Ngày',
-      dataIndex: 'date',
-      render: (date) => new Date(date).toLocaleDateString('vi-VN')
-    },
-    {
-      title: 'Loại',
-      dataIndex: 'type',
-      render: (type) => <Tag color="blue">{type}</Tag>
-    },
-    {
-      title: 'Mô tả',
-      dataIndex: 'description'
-    },
-    {
-      title: 'Bác sĩ',
-      dataIndex: 'doctorName'
-    },
-    {
-      title: 'Hành động',
-      render: (_, record) => (
-        <Button
-          type="primary"
-          size="small"
-          onClick={() => {
-            setSelectedRecord(record);
-            setDrawerVisible(true);
-          }}
-        >
-          Xem chi tiết
-        </Button>
-      )
-    }
-  ];
-
-  const appointmentsColumns = [
-    {
-      title: 'Ngày giờ',
-      dataIndex: 'appointmentDate',
-      render: (date) => new Date(date).toLocaleString('vi-VN')
-    },
-    {
-      title: 'Bác sĩ',
-      dataIndex: 'doctorName'
-    },
-    {
-      title: 'Phòng',
-      dataIndex: 'room'
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      render: (status) => {
-        const statusMap = {
-          SCHEDULED: { color: 'blue', text: 'Đã đặt' },
-          COMPLETED: { color: 'success', text: 'Hoàn thành' },
-          CANCELLED: { color: 'error', text: 'Hủy' }
-        };
-        const config = statusMap[status] || { color: 'default', text: status };
-        return <Tag color={config.color}>{config.text}</Tag>;
-      }
-    }
-  ];
-
-  const prescriptionsColumns = [
-    {
-      title: 'Tên thuốc',
-      dataIndex: 'medicineName'
-    },
-    {
-      title: 'Liều lượng',
-      dataIndex: 'dosage'
-    },
-    {
-      title: 'Cách dùng',
-      dataIndex: 'instruction'
-    },
-    {
-      title: 'Ngày cấp',
-      dataIndex: 'prescriptionDate',
-      render: (date) => new Date(date).toLocaleDateString('vi-VN')
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      render: (status) => {
-        const statusMap = {
-          ACTIVE: { color: 'success', text: 'Hoạt động' },
-          EXPIRED: { color: 'error', text: 'Hết hiệu lực' },
-          COMPLETED: { color: 'default', text: 'Hoàn thành' }
-        };
-        const config = statusMap[status] || { color: 'default', text: status };
-        return <Tag color={config.color}>{config.text}</Tag>;
-      }
-    }
-  ];
-
-  const billsColumns = [
-    {
-      title: 'Mã hóa đơn',
-      dataIndex: 'invoiceNumber'
-    },
-    {
-      title: 'Ngày',
-      dataIndex: 'date',
-      render: (date) => dayjs(date).format('DD/MM/YYYY')
-    },
-    {
-      title: 'Số tiền',
-      dataIndex: 'amount',
-      render: (amount) => `${amount?.toLocaleString('vi-VN')} ₫`
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'status',
-      render: (status) => {
-        const statusMap = {
-          PENDING: { color: 'orange', text: 'Chưa thanh toán' },
-          PAID: { color: 'green', text: 'Đã thanh toán' },
-          OVERDUE: { color: 'red', text: 'Quá hạn' },
-          CANCELLED: { color: 'gray', text: 'Hủy' }
-        };
-        const config = statusMap[status] || { color: 'default', text: status };
-        return <Tag color={config.color}>{config.text}</Tag>;
-      }
-    },
-    {
-      title: 'Hành động',
-      render: (_, record) => (
-        <Button type="primary" size="small">
-          Xem chi tiết
-        </Button>
-      )
-    }
+    { key: '1', icon: <HomeOutlined />, label: 'Thông tin cá nhân' },
+    { key: '2', icon: <FileTextOutlined />, label: 'Hồ sơ y tế' },
+    { key: '3', icon: <CalendarOutlined />, label: 'Lịch khám' },
+    { key: '4', icon: <MedicineBoxOutlined />, label: 'Đơn thuốc' },
+    { key: '5', icon: <FileTextOutlined />, label: 'Hóa đơn' },
+    { key: '6', icon: <CalendarOutlined />, label: 'Đặt lịch khám' }
   ];
 
   return (
-    <Layout className="min-h-screen">
-      <Sider
-        trigger={null}
-        collapsible
-        collapsed={collapsed}
-        style={{ background: '#fff' }}
-      >
-        <div style={{ padding: '16px', textAlign: 'center', marginBottom: '20px' }}>
-          <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#1890ff' }}>🏥</div>
-          {!collapsed && <div style={{ fontSize: '12px', color: '#666' }}>Healthcare</div>}
+    <Layout className="min-h-screen" style={{ background: '#f0f2f5' }}>
+      <Sider trigger={null} collapsible collapsed={collapsed} width={240} 
+        style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', position: 'fixed', left: 0, top: 0, bottom: 0, overflow: 'auto', zIndex: 100 }}>
+        <div style={{ padding: '24px 16px', textAlign: 'center', color: '#fff', fontWeight: '700', fontSize: '18px', marginBottom: '24px' }}>
+          {!collapsed ? '🏥 Healthcare' : '🏥'}
         </div>
-        <Menu
-          mode="inline"
-          selectedKeys={[selectedKey]}
-          onClick={(e) => setSelectedKey(e.key)}
-          items={menuItems}
-        />
+        <Menu mode="inline" selectedKeys={[selectedKey]} onClick={(e) => setSelectedKey(e.key)} items={menuItems}
+          style={{ background: 'transparent', border: 'none' }} theme="dark" />
       </Sider>
 
-      <Layout>
-        <Header style={{ background: '#fff', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <Button
-              type="text"
-              icon={collapsed ? '☰' : '✕'}
-              onClick={() => setCollapsed(!collapsed)}
-            />
-            <span style={{ fontSize: '18px', fontWeight: 'bold' }}>Bệnh nhân - {user?.personalInfo?.firstName} {user?.personalInfo?.lastName}</span>
-          </div>
-          <Button
-            danger
-            icon={<LogoutOutlined />}
-            onClick={handleLogout}
-          >
-            Đăng xuất
+      <Layout style={{ marginLeft: collapsed ? 80 : 240, transition: 'all 0.3s ease' }}>
+        <Header style={{ background: '#fff', padding: '0 24px', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 99 }}>
+          <Button type="text" size="large" onClick={() => setCollapsed(!collapsed)}>
+            {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
           </Button>
+          <Space>
+            <span style={{ fontWeight: '500' }}>{user?.email}</span>
+            <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
+            <Button type="primary" danger onClick={handleLogout} icon={<LogoutOutlined />}>Đăng xuất</Button>
+          </Space>
         </Header>
 
-        <Content style={{ margin: '24px 16px', padding: '24px', background: '#f0f2f5' }}>
-          <Spin spinning={loading}>
-            {/* Home */}
-            {selectedKey === '1' && (
-              <div>
-                <h2 style={{ marginBottom: '24px' }}>Chào mừng, {user?.personalInfo?.firstName}!</h2>
-                <Row gutter={16}>
-                  <Col xs={24} sm={12} lg={6}>
-                    <Card>
-                      <Statistic
-                        title="Lịch hẹn sắp tới"
-                        value={appointments.filter(a => a.status === 'SCHEDULED').length}
-                        prefix={<CalendarOutlined style={{ color: '#1890ff' }} />}
-                      />
-                    </Card>
-                  </Col>
-                  <Col xs={24} sm={12} lg={6}>
-                    <Card>
-                      <Statistic
-                        title="Đơn thuốc hoạt động"
-                        value={prescriptions.filter(p => p.status === 'ACTIVE').length}
-                        prefix={<MedicineBoxOutlined style={{ color: '#52c41a' }} />}
-                      />
-                    </Card>
-                  </Col>
-                  <Col xs={24} sm={12} lg={6}>
-                    <Card>
-                      <Statistic
-                        title="Hồ sơ y tế"
-                        value={medicalRecords.length}
-                        prefix={<FileTextOutlined style={{ color: '#faad14' }} />}
-                      />
-                    </Card>
-                  </Col>
-                  <Col xs={24} sm={12} lg={6}>
-                    <Card>
-                      <Statistic
-                        title="Trạng thái"
-                        value={user?.status === 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}
-                        valueStyle={{ color: user?.status === 'ACTIVE' ? '#52c41a' : '#f5222d', fontSize: '14px' }}
-                      />
-                    </Card>
-                  </Col>
-                </Row>
-
-                {patientData && (
-                  <Card style={{ marginTop: '24px' }} title="📋 Thông tin sơ lược">
-                    <Descriptions column={1}>
-                      <Descriptions.Item label="Email">{user?.email}</Descriptions.Item>
-                      <Descriptions.Item label="Số điện thoại">{patientData.phone}</Descriptions.Item>
-                      <Descriptions.Item label="Ngày sinh">
-                        {new Date(patientData.dateOfBirth).toLocaleDateString('vi-VN')}
-                      </Descriptions.Item>
-                      <Descriptions.Item label="Giới tính">{patientData.gender}</Descriptions.Item>
-                    </Descriptions>
-                  </Card>
-                )}
-              </div>
-            )}
-
-            {/* Medical Records */}
-            {selectedKey === '2' && (
-              <Card title="📄 Hồ sơ y tế">
-                <Table
-                  columns={medicalRecordsColumns}
-                  dataSource={medicalRecords}
-                  pagination={{ pageSize: 10 }}
-                  rowKey="_id"
-                />
-              </Card>
-            )}
-
-            {/* Appointments */}
-            {selectedKey === '3' && (
-              <Card title="📅 Lịch hẹn">
-                <Table
-                  columns={appointmentsColumns}
-                  dataSource={appointments}
-                  pagination={{ pageSize: 10 }}
-                  rowKey="_id"
-                />
-              </Card>
-            )}
-
-            {/* Prescriptions */}
-            {selectedKey === '4' && (
-              <Card title="💊 Đơn thuốc">
-                <Table
-                  columns={prescriptionsColumns}
-                  dataSource={prescriptions}
-                  pagination={{ pageSize: 10 }}
-                  rowKey="_id"
-                />
-              </Card>
-            )}
-
-            {/* Insurance */}
-            {selectedKey === '5' && (
-              <Card title="🛡️ Bảo hiểm">
-                {patientData?.insurance ? (
-                  <Descriptions column={1} bordered>
-                    <Descriptions.Item label="Công ty bảo hiểm">
-                      {patientData.insurance.provider}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Số bảo hiểm">
-                      {patientData.insurance.policyNumber}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Ngày hiệu lực">
-                      {new Date(patientData.insurance.effectiveDate).toLocaleDateString('vi-VN')}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Ngày hết hạn">
-                      {new Date(patientData.insurance.expiryDate).toLocaleDateString('vi-VN')}
-                    </Descriptions.Item>
-                    <Descriptions.Item label="Trạng thái">
-                      <Badge
-                        status={patientData.insurance.status === 'ACTIVE' ? 'success' : 'error'}
-                        text={patientData.insurance.status === 'ACTIVE' ? 'Hoạt động' : 'Hết hạn'}
-                      />
-                    </Descriptions.Item>
-                  </Descriptions>
-                ) : (
-                  <Empty description="Chưa có thông tin bảo hiểm" />
-                )}
-              </Card>
-            )}
-
-            {/* Bills/Invoices */}
-            {selectedKey === '5.5' && (
-              <Card title="💳 Hóa đơn">
-                <Table
-                  columns={billsColumns}
-                  dataSource={bills}
-                  pagination={{ pageSize: 10 }}
-                  rowKey="_id"
-                />
-              </Card>
-            )}
-
-            {/* Profile */}
-            {selectedKey === '6' && (
-              <Card title="👤 Thông tin cá nhân">
-                <Descriptions column={1} bordered>
-                  <Descriptions.Item label="Email">{user?.email}</Descriptions.Item>
-                  <Descriptions.Item label="Họ">
-                    {user?.personalInfo?.firstName}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Tên">
-                    {user?.personalInfo?.lastName}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Số điện thoại">
-                    {user?.personalInfo?.phone}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Ngày sinh">
-                    {user?.personalInfo?.dateOfBirth
-                      ? new Date(user.personalInfo.dateOfBirth).toLocaleDateString('vi-VN')
-                      : '-'}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Giới tính">
-                    {user?.personalInfo?.gender}
-                  </Descriptions.Item>
-                  <Descriptions.Item label="Ngày tạo">
-                    {user?.createdAt
-                      ? new Date(user.createdAt).toLocaleString('vi-VN')
-                      : '-'}
-                  </Descriptions.Item>
-                </Descriptions>
-              </Card>
-            )}
+        <Content style={{ padding: '24px', minHeight: 'calc(100vh - 100px)' }}>
+          <Spin spinning={loading} delay={500}>
+            {selectedKey === '1' && <PatientPersonalInfo patientData={data.patient} />}
+            {selectedKey === '2' && <MedicalRecordsSection records={data.records} patient={data.patient} />}
+            {selectedKey === '3' && <AppointmentsSection appointments={data.appointments} patient={data.patient} prescriptions={data.prescriptions} bills={data.bills} />}
+            {selectedKey === '4' && <PrescriptionsSection prescriptions={data.prescriptions} appointments={data.appointments} records={data.records} />}
+            {selectedKey === '5' && <BillingSection bills={data.bills} appointments={data.appointments} patient={data.patient} />}
+            {selectedKey === '6' && <AppointmentBooking patient={data.patient} onSuccess={fetchAllData} />}
           </Spin>
         </Content>
       </Layout>
-
-      {/* Medical Record Detail Drawer */}
-      <Drawer
-        title="Chi tiết hồ sơ y tế"
-        width={600}
-        onClose={() => setDrawerVisible(false)}
-        open={drawerVisible}
-      >
-        {selectedRecord && (
-          <Descriptions bordered column={1}>
-            <Descriptions.Item label="Ngày">
-              {new Date(selectedRecord.date).toLocaleString('vi-VN')}
-            </Descriptions.Item>
-            <Descriptions.Item label="Loại">{selectedRecord.type}</Descriptions.Item>
-            <Descriptions.Item label="Mô tả">{selectedRecord.description}</Descriptions.Item>
-            <Descriptions.Item label="Bác sĩ">{selectedRecord.doctorName}</Descriptions.Item>
-            <Descriptions.Item label="Ghi chú">{selectedRecord.notes || '-'}</Descriptions.Item>
-          </Descriptions>
-        )}
-      </Drawer>
     </Layout>
   );
 };

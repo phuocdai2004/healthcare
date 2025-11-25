@@ -74,10 +74,9 @@ async function register(req, res, next) {
 
     // Ghi audit log
     await log(
-      creator ? 'REGISTER_USER' : 'SELF_REGISTER',
       creator ? creator.sub : user._id,
-      `Đã tạo user mới: ${user.email} với role: ${requestedRole}`,
-      req.ip
+      creator ? 'REGISTER_USER' : 'SELF_REGISTER',
+      { email: user.email, role: requestedRole, ip: req.ip, userAgent: req.headers['user-agent'] }
     );
 
     res.status(201).json({ 
@@ -144,7 +143,7 @@ async function login(req, res, next) {
     });
 
     // Ghi audit log
-    await log('LOGIN', result.user._id, 'Đăng nhập thành công', req.ip);
+    await log(result.user._id, 'LOGIN_SUCCESS', { ip: req.ip, userAgent: req.headers['user-agent'] });
 
     res.json({
       success: true,
@@ -169,7 +168,7 @@ async function login(req, res, next) {
     
     // Ghi audit log lỗi
     try {
-      await log('LOGIN_FAILED', 'system', `Đăng nhập thất bại: ${err.message}`, req.ip);
+      await log(null, 'LOGIN_FAILED', { error: err.message, ip: req.ip, userAgent: req.headers['user-agent'] });
     } catch (auditErr) {
       console.error('Audit log error:', auditErr);
     }

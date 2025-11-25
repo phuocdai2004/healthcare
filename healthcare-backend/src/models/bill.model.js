@@ -12,6 +12,10 @@ const billSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  appointmentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Appointment'
+  },
   
   // Thông tin hóa đơn
   issueDate: {
@@ -150,6 +154,7 @@ const billSchema = new mongoose.Schema({
 
 // Indexes
 billSchema.index({ patientId: 1, issueDate: -1 });
+billSchema.index({ appointmentId: 1 });
 billSchema.index({ billId: 1 });
 billSchema.index({ status: 1 });
 billSchema.index({ dueDate: 1 });

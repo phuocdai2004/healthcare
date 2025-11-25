@@ -230,6 +230,36 @@ class AppointmentController {
   }
 
   /**
+   * 🎯 XÁC NHẬN LỊCH HẸN VÀ TẠO HÓA ĐƠN
+   */
+  async confirmAppointment(req, res, next) {
+    try {
+      const { appointmentId } = req.params;
+      
+      console.log('✅ [APPOINTMENT] Confirming appointment:', appointmentId);
+
+      const confirmedAppointment = await appointmentService.confirmAppointment(appointmentId);
+
+      // 🎯 AUDIT LOG
+      await auditLog(AUDIT_ACTIONS.APPOINTMENT_UPDATE, {
+        resource: 'Appointment',
+        resourceId: appointmentId,
+        category: 'APPOINTMENT_CONFIRMATION',
+        metadata: { status: 'CONFIRMED' }
+      })(req, res, () => {});
+
+      res.json({
+        success: true,
+        message: 'Xác nhận lịch hẹn thành công',
+        data: confirmedAppointment
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
    * 🎯 TẠO LỊCH LÀM VIỆC
    */
   async createSchedule(req, res, next) {

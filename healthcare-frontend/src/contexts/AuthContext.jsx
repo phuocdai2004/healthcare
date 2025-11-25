@@ -32,26 +32,28 @@ export const AuthProvider = ({ children }) => {
 
       console.log('Login response:', response.data);
 
-      if (response.data.success) {
-        const { user: userData, tokens } = response.data.data;
-        const { accessToken, refreshToken } = tokens;
-
-        // Check if userData is Mongoose document and extract _doc
-        const plainUserData = userData._doc || userData;
-
-        console.log('Plain user data:', plainUserData);
-        console.log('Tokens:', tokens);
-
-        // Store tokens and user
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-        localStorage.setItem('user', JSON.stringify(plainUserData));
-
-        setUser(plainUserData);
-        return plainUserData;
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Đăng nhập thất bại');
       }
+
+      const { user: userData, tokens } = response.data.data;
+      const { accessToken, refreshToken } = tokens;
+
+      // Check if userData is Mongoose document and extract _doc
+      const plainUserData = userData._doc || userData;
+
+      console.log('Plain user data:', plainUserData);
+      console.log('Tokens:', tokens);
+
+      // Store tokens and user
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('refreshToken', refreshToken);
+      localStorage.setItem('user', JSON.stringify(plainUserData));
+
+      setUser(plainUserData);
+      return plainUserData;
     } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Đăng nhập thất bại';
+      const errorMessage = err.response?.data?.message || err.message || 'Đăng nhập thất bại';
       setError(errorMessage);
       throw err;
     }

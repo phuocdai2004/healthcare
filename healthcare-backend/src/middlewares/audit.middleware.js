@@ -113,11 +113,22 @@ function auditLog(action, options = {}) {
       process.nextTick(async () => {
         try {
           const finalAuditData = {
-            ...auditData,
-            responseTime,
-            statusCode: res.statusCode,
-            responseSize: Buffer.byteLength(data || '', 'utf8'),
-            success: res.statusCode < 400,
+            action: auditData.action,
+            actor: auditData.user?.id || null, // Map user.id to actor field
+            ip: auditData.ip,
+            userAgent: auditData.userAgent,
+            meta: {
+              method: auditData.method,
+              url: auditData.url,
+              params: auditData.params,
+              query: auditData.query,
+              body: auditData.body,
+              responseTime,
+              statusCode: res.statusCode,
+              responseSize: Buffer.byteLength(data || '', 'utf8'),
+              success: res.statusCode < 400,
+              ...options.metadata,
+            }
           };
 
           await AuditLog.create(finalAuditData);

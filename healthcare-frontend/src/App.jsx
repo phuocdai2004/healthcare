@@ -5,6 +5,11 @@ import viVN from 'antd/locale/vi_VN';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import HomePage from './pages/HomePage';
+import FeaturesPage from './pages/FeaturesPage';
+import PricingPage from './pages/PricingPage';
+import AboutPage from './pages/AboutPage';
+import BlogPage from './pages/BlogPage';
+import CustomersPage from './pages/CustomersPage';
 import SuperAdminLogin from './pages/SuperAdmin/Login';
 import SuperAdminRegister from './pages/SuperAdmin/Register';
 import SuperAdminDashboard from './pages/SuperAdmin/Dashboard';
@@ -61,6 +66,11 @@ function AppContent() {
     <Routes>
       {/* Home Page */}
       <Route path="/" element={<HomePage />} />
+      <Route path="/features" element={<FeaturesPage />} />
+      <Route path="/pricing" element={<PricingPage />} />
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/blog" element={<BlogPage />} />
+      <Route path="/customers" element={<CustomersPage />} />
 
       {/* Super Admin Routes */}
       <Route path="/superadmin/login" element={<SuperAdminLogin />} />
@@ -95,6 +105,12 @@ function AppContent() {
           </ProtectedRoute>
         }
       />
+
+      {/* Redirect /login to superadmin login */}
+      <Route path="/login" element={<Navigate to="/superadmin/login" replace />} />
+
+      {/* Catch all - redirect to home */}
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

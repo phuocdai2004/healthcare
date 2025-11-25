@@ -6,6 +6,7 @@ const { hashPassword, comparePassword, randomTokenHex, sha256 } = require('../ut
 const { signAccessToken } = require('../utils/jwt');
 const { appConfig } = require('../config');
 const { log } = require('./audit.service');
+const Patient = require('../models/patient.model');
 const speakeasy = require('speakeasy');
 const { getRefreshExpiryMs } = require('../config/jwt.config');
 const { ROLES, ROLE_PERMISSIONS } = require('../constants/roles');
@@ -115,13 +116,33 @@ async function registerUser({ email, name, password, role, creatorId, ip, userAg
 
   await user.save();
   
+  // 🏥 AUTO-CREATE PATIENT RECORD FOR PATIENT ROLE
+  if (user.role === ROLES.PATIENT) {
+    try {
+      const patientId = `PAT-${user._id.toString().toUpperCase().slice(-8)}-${Date.now()}`;
+      await Patient.create({
+        userId: user._id,
+        patientId,
+        bloodType: 'UNKNOWN'
+      });
+      console.log(`🏥 Patient record created for user ${user._id}`);
+    } catch (err) {
+      console.error('❌ Error creating patient record:', err.message);
+      // Don't throw - user is already created, we'll create patient record on first access
+    }
+  }
+  
   // Ghi audit log
   await log(
-    creatorId ? 'REGISTER_USER' : 'SELF_REGISTER',
     creatorId || user._id,
-    `Đã tạo user: ${email} với role: ${user.role}`,
-    ip,
-    { userAgent, targetUserId: user._id.toString() }
+    creatorId ? 'REGISTER_USER' : 'SELF_REGISTER',
+    { 
+      targetUserId: user._id.toString(), 
+      ip, 
+      userAgent,
+      email,
+      role: user.role
+    }
   );
   
   return user;
