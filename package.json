@@ -1,0 +1,13 @@
+{
+  "name": "healthcare-system",
+  "version": "1.0.0",
+  "description": "Healthcare System - Backend + Frontend",
+  "main": "healthcare-backend/server.js",
+  "scripts": {
+    "start": "cd healthcare-backend && npm install && npm start",
+    "dev": "cd healthcare-backend && npm run dev"
+  },
+  "keywords": ["healthcare"],
+  "author": "",
+  "license": "ISC"
+}
