@@ -21,22 +21,22 @@ class AppointmentService {
       const doctor = await User.findOne({ 
         _id: appointmentData.doctorId, 
         role: 'DOCTOR',
-        isActive: true 
+        status: 'ACTIVE' 
       });
       
       if (!doctor) {
-        throw new AppError('Không tìm thấy bác sĩ', 404, ERROR_CODES.DOCTOR_NOT_FOUND);
+        throw new AppError('Không tìm thấy bác sĩ hoặc bác sĩ không khả dụng', 404, ERROR_CODES.DOCTOR_NOT_FOUND);
       }
 
       // 🎯 KIỂM TRA BỆNH NHÂN TỒN TẠI
       const patient = await User.findOne({ 
         _id: appointmentData.patientId, 
         role: 'PATIENT',
-        isActive: true 
+        status: 'ACTIVE' 
       });
       
       if (!patient) {
-        throw new AppError('Không tìm thấy bệnh nhân', 404, ERROR_CODES.PATIENT_NOT_FOUND);
+        throw new AppError('Không tìm thấy bệnh nhân hoặc tài khoản chưa kích hoạt', 404, ERROR_CODES.PATIENT_NOT_FOUND);
       }
 
       // 🎯 KIỂM TRA TRÙNG LỊCH

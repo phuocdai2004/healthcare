@@ -97,17 +97,32 @@ const AppointmentBooking = (props) => {
         return;
       }
 
+      // Lấy patientId từ user (AuthContext) thay vì từ patient object
+      const patientId = props.user?._id;
+      if (!patientId) {
+        message.error('Không xác định được bệnh nhân. Vui lòng đăng nhập lại.');
+        return;
+      }
+
       // Lấy thông tin bác sĩ đã chọn
       const selectedDoctor = doctors.find(d => d.id === data.doc);
 
+      // Parse thời gian từ slot (vd: "08:00 - 08:30")
+      const slotStartTime = data.slot.split(' - ')[0]; // "08:00"
+      const appointmentDateTime = data.date.format('YYYY-MM-DD') + 'T' + slotStartTime + ':00';
+
       // 1️⃣ TẠO LỊCH HẸN MỚI
       const appointmentPayload = {
-        patientId: props.patient?._id,
+        patientId: patientId,
         doctorId: data.doc, // ID thực từ database
-        appointmentDate: data.date,
-        appointmentTime: data.slot,
-        symptoms: data.symptoms || 'N/A',
-        department: selectedDoctor?.department || data.dept ? depts.find(d => d.key === data.dept)?.label : 'N/A'
+        appointmentDate: appointmentDateTime,
+        type: 'CONSULTATION',
+        mode: 'IN_PERSON',
+        location: selectedDoctor?.department || 'Bệnh viện',
+        room: 'P.101',
+        reason: data.symptoms || 'Khám bệnh',
+        symptoms: data.symptoms ? [data.symptoms] : [],
+        duration: 30
       };
 
       console.log('📅 Creating appointment:', appointmentPayload);
@@ -246,7 +261,7 @@ const AppointmentBooking = (props) => {
               <Row gutter={[16, 16]}>
                 {doctors.map((doc, idx) => (
                   <Col xs={24} sm={12} key={doc.id} style={styles.slideIn(idx * 0.08)}>
-                    <div onClick={() => setData({ ...data, doc: doc.id, price: doc.consultationFee || 300000 })}
+                    <div onClick={() => setData({ ...data, doc: doc.id, price: doc.consultationFee || 5000})}
                       style={{
                         ...styles.card, background: data.doc === doc.id ? '#f0f7ff' : '#fff', border: data.doc === doc.id ? '2px solid #1890ff' : '1px solid #e8e8e8',
                         cursor: 'pointer', borderRadius: '12px', padding: '18px'
@@ -271,7 +286,7 @@ const AppointmentBooking = (props) => {
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Rate disabled defaultValue={4.5} allowHalf style={{ fontSize: '12px' }} />
                             <span style={{ color: '#1890ff', fontWeight: '700', fontSize: '16px' }}>
-                              {(doc.consultationFee || 300000).toLocaleString('vi-VN')} ₫
+                              {(doc.consultationFee || 5000).toLocaleString('vi-VN')} ₫
                             </span>
                           </div>
                         </Col>
@@ -451,15 +466,15 @@ const AppointmentBooking = (props) => {
                   </div>
                   <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', fontSize: '14px', paddingBottom: '12px', borderBottom: '1px solid #e8e8e8' }}>
                     <span>Phí dịch vụ</span>
-                    <strong>50.000 ₫</strong>
+                    <strong>3 ₫</strong>
                   </div>
                   <div style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', fontSize: '14px', paddingBottom: '12px', borderBottom: '2px solid #f0f0f0' }}>
                     <span>Xét nghiệm</span>
-                    <strong>0 ₫</strong>
+                    <strong>3 ₫</strong>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '18px', fontWeight: '700', marginBottom: '20px', color: '#1890ff' }}>
                     <span>Tổng tiền</span>
-                    <span>{(data.price + 50000).toLocaleString('vi-VN')} ₫</span>
+                    <span>{data.price.toLocaleString('vi-VN')} ₫</span>
                   </div>
                   <div style={{ padding: '12px', backgroundColor: '#fffbe6', borderRadius: '8px', border: '1px solid #ffe58f', marginBottom: '20px', fontSize: '13px', color: '#ad6800', lineHeight: '1.5' }}>
                     Vui lòng đến 10 phút trước giờ khám. Thanh toán tại quầy hoặc qua ứng dụng.
@@ -548,23 +563,35 @@ const AppointmentBooking = (props) => {
             {paymentMethod === 'transfer' && (
               <div style={{ fontSize: '13px', lineHeight: '1.8' }}>
                 <div style={{ marginBottom: '8px' }}>
-                  <span style={{ color: '#666' }}>Ngân hàng:</span> <strong>Vietcombank</strong>
+                  <span style={{ color: '#666' }}>Ngân hàng:</span> <strong>MBbank</strong>
                 </div>
                 <div style={{ marginBottom: '8px' }}>
-                  <span style={{ color: '#666' }}>Số tài khoản:</span> <strong style={{ fontFamily: 'monospace' }}>1234567890</strong>
+                  <span style={{ color: '#666' }}>Số tài khoản:</span> <strong style={{ fontFamily: 'monospace' }}>90024122004</strong>
                 </div>
                 <div style={{ marginBottom: '8px' }}>
-                  <span style={{ color: '#666' }}>Chủ tài khoản:</span> <strong>BENH VIEN QUOC PHONG</strong>
+                  <span style={{ color: '#666' }}>Chủ tài khoản:</span> <strong>NGUYEN PHUOC DAI</strong>
                 </div>
               </div>
             )}
             {paymentMethod === 'qr' && (
               <div style={{ textAlign: 'center' }}>
-                <div style={{
-                  width: '180px', height: '180px', margin: '12px auto', background: '#f0f0f0', borderRadius: '8px',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #d9d9d9', fontSize: '12px', color: '#999'
-                }}>
-                  📱 QR Code
+                <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
+                  Quét mã QR bằng app ngân hàng hoặc Momo/ZaloPay để thanh toán
+                </p>
+                <img 
+                  src={`https://img.vietqr.io/image/MB-90024122004-compact2.png?amount=${data.price}&addInfo=Thanh%20toan%20kham%20benh&accountName=NGUYEN%20PHUOC%20DAI`}
+                  alt="QR Code Thanh Toán"
+                  style={{
+                    width: '250px', 
+                    height: '300px', 
+                    margin: '12px auto', 
+                    borderRadius: '8px',
+                    border: '1px solid #d9d9d9'
+                  }}
+                />
+                <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>
+                  <div><strong>Số tiền:</strong> <span style={{ color: '#1890ff', fontWeight: '700' }}>{data.price.toLocaleString('vi-VN')} ₫</span></div>
+                  <div><strong>Nội dung:</strong> Thanh toan kham benh</div>
                 </div>
               </div>
             )}
@@ -574,7 +601,7 @@ const AppointmentBooking = (props) => {
                   <span style={{ color: '#666' }}>Số dư:</span> <strong style={{ color: '#52c41a' }}>2.500.000 ₫</strong>
                 </div>
                 <div style={{ marginBottom: '8px' }}>
-                  <span style={{ color: '#666' }}>Cần thanh toán:</span> <strong style={{ color: '#1890ff' }}>{(data.price + 50000).toLocaleString('vi-VN')} ₫</strong>
+                  <span style={{ color: '#666' }}>Cần thanh toán:</span> <strong style={{ color: '#1890ff' }}>{data.price.toLocaleString('vi-VN')} ₫</strong>
                 </div>
               </div>
             )}

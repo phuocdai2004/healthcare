@@ -926,7 +926,7 @@ async listDeletedUsers(options = {}) {
         department: doc.professionalInfo?.department || 'Khoa Nội',
         yearsOfExperience: doc.professionalInfo?.yearsOfExperience || 0,
         qualifications: doc.professionalInfo?.qualifications || [],
-        consultationFee: 300000 // Default fee, có thể thêm field riêng
+        consultationFee: 5000 // Giá khám 5 nghìn
       }));
 
       return formattedDoctors;

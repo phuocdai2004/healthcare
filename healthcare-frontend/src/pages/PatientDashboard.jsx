@@ -114,7 +114,7 @@ const PatientDashboard = () => {
             {selectedKey === '3' && <AppointmentsSection appointments={data.appointments} patient={data.patient} prescriptions={data.prescriptions} bills={data.bills} />}
             {selectedKey === '4' && <PrescriptionsSection prescriptions={data.prescriptions} appointments={data.appointments} records={data.records} />}
             {selectedKey === '5' && <BillingSection bills={data.bills} appointments={data.appointments} patient={data.patient} />}
-            {selectedKey === '6' && <AppointmentBooking patient={data.patient} onSuccess={fetchAllData} />}
+            {selectedKey === '6' && <AppointmentBooking patient={data.patient} user={user} onSuccess={fetchAllData} />}
           </Spin>
         </Content>
       </Layout>
