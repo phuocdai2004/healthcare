@@ -884,6 +884,58 @@ async listDeletedUsers(options = {}) {
     throw error;
   }
 }
+
+  /**
+   * 🎯 LẤY DANH SÁCH BÁC SĨ CHO BỆNH NHÂN ĐẶT LỊCH
+   * API public cho patient lấy danh sách bác sĩ
+   */
+  async getDoctorsForBooking(filter = {}) {
+    try {
+      const query = { 
+        role: ROLES.DOCTOR, 
+        status: 'ACTIVE' 
+      };
+
+      // Filter theo department nếu có
+      if (filter.department) {
+        query['professionalInfo.department'] = { 
+          $regex: filter.department, 
+          $options: 'i' 
+        };
+      }
+
+      // Filter theo specialization nếu có
+      if (filter.specialization) {
+        query['professionalInfo.specialization'] = { 
+          $regex: filter.specialization, 
+          $options: 'i' 
+        };
+      }
+
+      const doctors = await User.find(query)
+        .select('name email profile professionalInfo')
+        .lean();
+
+      // Format response cho frontend
+      const formattedDoctors = doctors.map(doc => ({
+        id: doc._id,
+        name: doc.name,
+        email: doc.email,
+        phone: doc.profile?.phone || '',
+        specialization: doc.professionalInfo?.specialization || 'Đa khoa',
+        department: doc.professionalInfo?.department || 'Khoa Nội',
+        yearsOfExperience: doc.professionalInfo?.yearsOfExperience || 0,
+        qualifications: doc.professionalInfo?.qualifications || [],
+        consultationFee: 300000 // Default fee, có thể thêm field riêng
+      }));
+
+      return formattedDoctors;
+
+    } catch (error) {
+      console.error('❌ [USER SERVICE] Get doctors for booking error:', error);
+      throw error;
+    }
+  }
 }
 
 

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Row, Col, Card, Button, Input, Modal, Tag, Avatar, Rate, Calendar, Space, Divider, Form, Radio, message } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Row, Col, Card, Button, Input, Modal, Tag, Avatar, Rate, Calendar, Space, Divider, Form, Radio, message, Spin } from 'antd';
 import { UserOutlined } from '@ant-design/icons';
 import apiClient from '../utils/api';
 
@@ -7,6 +7,8 @@ const AppointmentBooking = (props) => {
   const [step, setStep] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState(null);
   const [showPayment, setShowPayment] = useState(false);
+  const [doctors, setDoctors] = useState([]); // Danh sách bác sĩ từ API
+  const [loading, setLoading] = useState(false);
   const [data, setData] = useState({
     dept: null,
     doc: null,
@@ -16,31 +18,64 @@ const AppointmentBooking = (props) => {
     price: 0
   });
 
-  // Mock Data
+  // Danh sách khoa (có thể fetch từ API nếu cần)
   const depts = [
-    { key: 'noi', label: 'Khoa Nội tổng hợp', color: '#1890ff' },
+    { key: 'noi', label: 'Khoa Nội', color: '#1890ff' },
     { key: 'nhi', label: 'Khoa Nhi', color: '#13c2c2' },
     { key: 'da', label: 'Khoa Da Liễu', color: '#eb2f96' },
-    { key: 'tim', label: 'Khoa Tim Mạch', color: '#f5222d' }
+    { key: 'tim', label: 'Khoa Tim Mạch', color: '#f5222d' },
+    { key: 'all', label: 'Tất cả khoa', color: '#52c41a' }
   ];
 
-  const docsByDept = {
-    'noi': [
-      { id: 'dr1', name: 'BS. Nguyễn Văn A', spec: 'Nội tiêu hóa', exp: 12, rate: 4.8, price: 500000 },
-      { id: 'dr2', name: 'BS. Trần Thị B', spec: 'Nội thần kinh', exp: 8, rate: 4.6, price: 450000 }
-    ],
-    'nhi': [
-      { id: 'dr3', name: 'BS. Lê Văn C', spec: 'Nhi khoa', exp: 10, rate: 4.9, price: 400000 },
-      { id: 'dr4', name: 'BS. Phạm Thị D', spec: 'Nhi tim', exp: 6, rate: 4.5, price: 480000 }
-    ],
-    'da': [
-      { id: 'dr5', name: 'BS. Hoàng Văn E', spec: 'Da liễu', exp: 15, rate: 4.7, price: 350000 },
-      { id: 'dr6', name: 'BS. Vũ Thị F', spec: 'Thẩm mỹ da', exp: 9, rate: 4.8, price: 600000 }
-    ],
-    'tim': [
-      { id: 'dr7', name: 'BS. Đỗ Văn G', spec: 'Tim mạch', exp: 18, rate: 5.0, price: 700000 },
-      { id: 'dr8', name: 'BS. Ngô Thị H', spec: 'Tim mạch can thiệp', exp: 12, rate: 4.9, price: 800000 }
-    ]
+  // Fetch danh sách bác sĩ từ API
+  useEffect(() => {
+    fetchDoctors();
+  }, []);
+
+  const fetchDoctors = async (department = null) => {
+    try {
+      setLoading(true);
+      let url = '/users/doctors/booking';
+      if (department && department !== 'all') {
+        url += `?department=${encodeURIComponent(department)}`;
+      }
+      
+      const response = await apiClient.get(url);
+      
+      if (response.data.success) {
+        setDoctors(response.data.data || []);
+      } else {
+        setDoctors([]);
+      }
+    } catch (error) {
+      console.error('❌ Lỗi fetch doctors:', error);
+      message.error('Không thể tải danh sách bác sĩ');
+      setDoctors([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Khi chọn khoa, fetch lại danh sách bác sĩ theo khoa đó
+  const handleSelectDept = (deptKey) => {
+    setData({ ...data, dept: deptKey, doc: null, date: null, slot: null, price: 0 });
+    const selectedDept = depts.find(d => d.key === deptKey);
+    if (selectedDept) {
+      fetchDoctors(selectedDept.label);
+    }
+    setStep(1);
+  };
+
+  // Lọc bác sĩ theo khoa đã chọn
+  const getFilteredDoctors = () => {
+    if (!data.dept || data.dept === 'all') return doctors;
+    const selectedDept = depts.find(d => d.key === data.dept);
+    if (!selectedDept) return doctors;
+    
+    return doctors.filter(doc => 
+      doc.department?.toLowerCase().includes(selectedDept.label.toLowerCase().replace('Khoa ', '')) ||
+      selectedDept.label.toLowerCase().includes(doc.department?.toLowerCase())
+    );
   };
 
   const slots = [
@@ -62,14 +97,17 @@ const AppointmentBooking = (props) => {
         return;
       }
 
+      // Lấy thông tin bác sĩ đã chọn
+      const selectedDoctor = doctors.find(d => d.id === data.doc);
+
       // 1️⃣ TẠO LỊCH HẸN MỚI
       const appointmentPayload = {
         patientId: props.patient?._id,
-        doctorId: data.doc.id,
+        doctorId: data.doc, // ID thực từ database
         appointmentDate: data.date,
         appointmentTime: data.slot,
         symptoms: data.symptoms || 'N/A',
-        department: data.dept ? depts.find(d => d.key === data.dept)?.label : 'N/A'
+        department: selectedDoctor?.department || data.dept ? depts.find(d => d.key === data.dept)?.label : 'N/A'
       };
 
       console.log('📅 Creating appointment:', appointmentPayload);
@@ -95,6 +133,11 @@ const AppointmentBooking = (props) => {
       console.error('❌ Lỗi thanh toán:', err.response?.data || err.message);
       message.error(err.response?.data?.message || 'Thanh toán thất bại, vui lòng thử lại');
     }
+  };
+
+  // Helper: Lấy thông tin bác sĩ đã chọn
+  const getSelectedDoctor = () => {
+    return doctors.find(d => d.id === data.doc);
   };
 
   const styles = {
@@ -160,7 +203,7 @@ const AppointmentBooking = (props) => {
             <Row gutter={[16, 16]}>
               {depts.map((d, idx) => (
                 <Col xs={24} sm={12} lg={6} key={d.key} style={styles.slideIn(idx * 0.08)}>
-                  <div onClick={() => { setData({ ...data, dept: d.key, doc: null, date: null, slot: null }); setStep(1); }}
+                  <div onClick={() => handleSelectDept(d.key)}
                     style={{
                       ...styles.card, padding: '24px 16px', background: data.dept === d.key ? `linear-gradient(135deg, ${d.color}12, ${d.color}06)` : '#fff',
                       border: data.dept === d.key ? `2px solid ${d.color}` : '1px solid #e8e8e8', cursor: 'pointer', minHeight: '140px',
@@ -180,12 +223,6 @@ const AppointmentBooking = (props) => {
                 </Col>
               ))}
             </Row>
-            <div style={{ marginTop: '28px', display: 'flex', justifyContent: 'flex-end' }}>
-              <Button type="primary" size="large" onClick={() => setStep(1)} disabled={!data.dept}
-                style={{ borderRadius: '8px', height: '40px', minWidth: '120px', fontSize: '15px', fontWeight: '600' }}>
-                Tiếp tục
-              </Button>
-            </div>
           </div>
         )}
 
@@ -195,36 +232,55 @@ const AppointmentBooking = (props) => {
             <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 20px 0', color: '#262626' }}>
               Chọn Bác Sĩ Bạn Muốn Khám
             </h3>
-            <Row gutter={[16, 16]}>
-              {docsByDept[data.dept]?.map((d, idx) => (
-                <Col xs={24} sm={12} key={d.id} style={styles.slideIn(idx * 0.08)}>
-                  <div onClick={() => setData({ ...data, doc: d.id, price: d.price })}
-                    style={{
-                      ...styles.card, background: data.doc === d.id ? '#f0f7ff' : '#fff', border: data.doc === d.id ? '2px solid #1890ff' : '1px solid #e8e8e8',
-                      cursor: 'pointer', borderRadius: '12px', padding: '18px'
-                    }}>
-                    <Row gutter={16} align="middle">
-                      <Col xs={0} sm={6}>
-                        <Avatar size={72} icon={<UserOutlined />} style={{ backgroundColor: '#1890ff', fontSize: '32px' }} />
-                      </Col>
-                      <Col xs={24} sm={18}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                          <h4 style={{ margin: 0, fontWeight: '700', fontSize: '16px', color: '#262626' }}>{d.name}</h4>
-                          {data.doc === d.id && <Tag color="blue">Đã chọn</Tag>}
-                        </div>
-                        <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: '#666', marginBottom: '10px', flexWrap: 'wrap' }}>
-                          <span>{d.spec}</span> <span>•</span> <span>{d.exp} năm kinh nghiệm</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <Rate disabled defaultValue={d.rate} allowHalf style={{ fontSize: '12px' }} />
-                          <span style={{ color: '#1890ff', fontWeight: '700', fontSize: '16px' }}>{d.price.toLocaleString('vi-VN')} ₫</span>
-                        </div>
-                      </Col>
-                    </Row>
-                  </div>
-                </Col>
-              ))}
-            </Row>
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '40px' }}>
+                <Spin size="large" />
+                <p style={{ marginTop: '16px', color: '#666' }}>Đang tải danh sách bác sĩ...</p>
+              </div>
+            ) : doctors.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '40px', background: '#fafafa', borderRadius: '12px' }}>
+                <p style={{ fontSize: '16px', color: '#666' }}>Không có bác sĩ nào khả dụng cho khoa này.</p>
+                <p style={{ fontSize: '14px', color: '#999' }}>Vui lòng chọn khoa khác hoặc liên hệ bệnh viện.</p>
+              </div>
+            ) : (
+              <Row gutter={[16, 16]}>
+                {doctors.map((doc, idx) => (
+                  <Col xs={24} sm={12} key={doc.id} style={styles.slideIn(idx * 0.08)}>
+                    <div onClick={() => setData({ ...data, doc: doc.id, price: doc.consultationFee || 300000 })}
+                      style={{
+                        ...styles.card, background: data.doc === doc.id ? '#f0f7ff' : '#fff', border: data.doc === doc.id ? '2px solid #1890ff' : '1px solid #e8e8e8',
+                        cursor: 'pointer', borderRadius: '12px', padding: '18px'
+                      }}>
+                      <Row gutter={16} align="middle">
+                        <Col xs={0} sm={6}>
+                          <Avatar size={72} icon={<UserOutlined />} style={{ backgroundColor: '#1890ff', fontSize: '32px' }} />
+                        </Col>
+                        <Col xs={24} sm={18}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                            <h4 style={{ margin: 0, fontWeight: '700', fontSize: '16px', color: '#262626' }}>{doc.name}</h4>
+                            {data.doc === doc.id && <Tag color="blue">Đã chọn</Tag>}
+                          </div>
+                          <div style={{ display: 'flex', gap: '16px', fontSize: '13px', color: '#666', marginBottom: '10px', flexWrap: 'wrap' }}>
+                            <span>{doc.specialization}</span> 
+                            <span>•</span> 
+                            <span>{doc.yearsOfExperience} năm kinh nghiệm</span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#888', marginBottom: '8px' }}>
+                            {doc.department}
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Rate disabled defaultValue={4.5} allowHalf style={{ fontSize: '12px' }} />
+                            <span style={{ color: '#1890ff', fontWeight: '700', fontSize: '16px' }}>
+                              {(doc.consultationFee || 300000).toLocaleString('vi-VN')} ₫
+                            </span>
+                          </div>
+                        </Col>
+                      </Row>
+                    </div>
+                  </Col>
+                ))}
+              </Row>
+            )}
             <div style={{ marginTop: '28px', display: 'flex', justifyContent: 'space-between' }}>
               <Button size="large" onClick={() => setStep(0)} style={{ borderRadius: '8px', height: '40px', minWidth: '100px', fontSize: '15px' }}>
                 Quay lại
@@ -367,7 +423,7 @@ const AppointmentBooking = (props) => {
                     <div>
                       <div style={{ fontSize: '12px', color: '#999', marginBottom: '4px' }}>Bác sĩ</div>
                       <div style={{ fontSize: '14px', fontWeight: '600', color: '#262626' }}>
-                        {docsByDept[data.dept]?.find(d => d.id === data.doc)?.name}
+                        {getSelectedDoctor()?.name || 'N/A'}
                       </div>
                     </div>
                     <div>

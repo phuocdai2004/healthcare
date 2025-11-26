@@ -62,6 +62,14 @@ router.post(
   userController.createUser
 );
 
+// 🎯 DANH SÁCH BÁC SĨ CHO BỆNH NHÂN ĐẶT LỊCH - GET /api/users/doctors/booking
+// Đặt trước route /:userId để tránh conflict
+router.get(
+  '/doctors/booking',
+  // Cho phép tất cả các role đã xác thực (bao gồm PATIENT)
+  userController.getDoctorsForBooking
+);
+
 // 🎯 DANH SÁCH USER - GET /api/users
 router.get(
   '/',

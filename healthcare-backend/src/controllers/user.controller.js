@@ -368,6 +368,29 @@ async listDeletedUsers(req, res, next) {
     next(error);
   }
 }
+
+  /**
+   * 🎯 LẤY DANH SÁCH BÁC SĨ CHO BỆNH NHÂN ĐẶT LỊCH
+   * Endpoint cho patient booking
+   */
+  async getDoctorsForBooking(req, res, next) {
+    try {
+      const { department, specialization } = req.query;
+      
+      const doctors = await userService.getDoctorsForBooking({
+        department,
+        specialization
+      });
+      
+      res.json({
+        success: true,
+        data: doctors,
+        total: doctors.length
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 
