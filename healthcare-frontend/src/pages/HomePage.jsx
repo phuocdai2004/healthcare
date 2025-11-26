@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Button, Row, Col, Card, Space, Collapse, Input, Form, message } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Button, Row, Col, Card, Space, Collapse, Input, Form, message, Badge, Tooltip } from 'antd';
 import { 
   SafetyOutlined, 
   TeamOutlined,
@@ -16,7 +16,13 @@ import {
   TwitterOutlined,
   StarOutlined,
   CheckOutlined,
-  CalendarOutlined
+  CalendarOutlined,
+  PlayCircleOutlined,
+  ThunderboltOutlined,
+  GlobalOutlined,
+  HeartOutlined,
+  SafetyCertificateOutlined,
+  RocketOutlined
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
@@ -25,6 +31,21 @@ import '../styles/animations.css';
 const HomePage = () => {
   const navigate = useNavigate();
   const [contactForm] = Form.useForm();
+  const [scrollY, setScrollY] = useState(0);
+  const [activeFeature, setActiveFeature] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => setScrollY(window.scrollY);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveFeature(prev => (prev + 1) % 6);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const features = [
     {
@@ -231,7 +252,7 @@ const HomePage = () => {
       bio: 'Bác sĩ chuyên khoa với 20+ năm kinh nghiệm'
     },
     {
-      name: 'Lê Văn Minh',
+      name: 'phai niê',
       role: 'Head of Support',
       expertise: 'Customer Success',
       image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face',
@@ -382,124 +403,243 @@ const HomePage = () => {
             size="small"
             onClick={() => navigate('/superadmin/register')}
             style={{
-              background: '#0099cc',
+              background: 'linear-gradient(135deg, #0099cc 0%, #0077aa 100%)',
               border: 'none',
               fontWeight: '600',
               fontSize: '13px',
               height: '36px',
               paddingLeft: '20px',
-              paddingRight: '20px'
+              paddingRight: '20px',
+              boxShadow: '0 4px 15px rgba(0, 153, 204, 0.4)'
             }}
           >
-            Đăng Ký
+            🚀 Đăng Ký Ngay
           </Button>
         </Space>
       </div>
 
-      {/* ===== HERO SECTION - PREMIUM ===== */}
+      {/* ===== HERO SECTION - ULTRA PREMIUM ===== */}
       <div
         style={{
-          background: `linear-gradient(135deg, rgba(0, 153, 204, 0.95) 0%, rgba(0, 119, 170, 0.95) 50%, rgba(0, 90, 139, 0.95) 100%), url('https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?w=1920&q=80')`,
+          background: `linear-gradient(135deg, rgba(0, 40, 80, 0.97) 0%, rgba(0, 80, 130, 0.95) 30%, rgba(0, 153, 204, 0.9) 70%, rgba(6, 182, 212, 0.85) 100%), url('https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=1920&q=80')`,
           backgroundSize: 'cover',
           backgroundPosition: 'center',
-          padding: '120px 40px',
+          backgroundAttachment: 'fixed',
+          padding: '140px 40px 120px',
           textAlign: 'center',
           color: '#ffffff',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          minHeight: '100vh',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center'
         }}
       >
-        {/* Floating elements */}
-        <div style={{ position: 'absolute', opacity: 0.15, fontSize: '200px', top: '10%', left: '5%', animation: 'float 6s ease-in-out infinite' }}>💊</div>
-        <div style={{ position: 'absolute', opacity: 0.1, fontSize: '150px', bottom: '10%', right: '10%', animation: 'float 8s ease-in-out infinite 1s' }}>🩺</div>
-        <div style={{ position: 'absolute', opacity: 0.1, fontSize: '120px', top: '20%', right: '15%', animation: 'float 7s ease-in-out infinite 0.5s' }}>❤️</div>
+        {/* Animated Background Particles */}
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              style={{
+                position: 'absolute',
+                width: `${Math.random() * 10 + 5}px`,
+                height: `${Math.random() * 10 + 5}px`,
+                background: 'rgba(255, 255, 255, 0.1)',
+                borderRadius: '50%',
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animation: `float ${Math.random() * 10 + 10}s ease-in-out infinite`,
+                animationDelay: `${Math.random() * 5}s`
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Glowing Orbs */}
+        <div style={{ 
+          position: 'absolute', 
+          width: '600px', 
+          height: '600px', 
+          background: 'radial-gradient(circle, rgba(6, 182, 212, 0.3) 0%, transparent 70%)', 
+          top: '-200px', 
+          right: '-200px',
+          animation: 'pulse 8s ease-in-out infinite'
+        }} />
+        <div style={{ 
+          position: 'absolute', 
+          width: '400px', 
+          height: '400px', 
+          background: 'radial-gradient(circle, rgba(0, 153, 204, 0.25) 0%, transparent 70%)', 
+          bottom: '-100px', 
+          left: '-100px',
+          animation: 'pulse 10s ease-in-out infinite 2s'
+        }} />
+
+        {/* Floating Medical Icons */}
+        <div style={{ position: 'absolute', opacity: 0.08, fontSize: '250px', top: '5%', left: '2%', animation: 'float 8s ease-in-out infinite', transform: `translateY(${scrollY * 0.1}px)` }}>💊</div>
+        <div style={{ position: 'absolute', opacity: 0.06, fontSize: '200px', bottom: '5%', right: '5%', animation: 'float 10s ease-in-out infinite 1s', transform: `translateY(${scrollY * -0.05}px)` }}>🩺</div>
+        <div style={{ position: 'absolute', opacity: 0.05, fontSize: '180px', top: '15%', right: '10%', animation: 'float 9s ease-in-out infinite 0.5s' }}>❤️</div>
+        <div style={{ position: 'absolute', opacity: 0.04, fontSize: '150px', bottom: '20%', left: '8%', animation: 'float 11s ease-in-out infinite 2s' }}>🏥</div>
+        <div style={{ position: 'absolute', opacity: 0.05, fontSize: '120px', top: '40%', left: '15%', animation: 'float 7s ease-in-out infinite 1.5s' }}>💉</div>
+
+        {/* Trust Badge */}
+        <div style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '8px',
+          background: 'rgba(255, 255, 255, 0.15)',
+          backdropFilter: 'blur(10px)',
+          padding: '8px 20px',
+          borderRadius: '50px',
+          marginBottom: '30px',
+          border: '1px solid rgba(255, 255, 255, 0.2)',
+          animation: 'fadeInDown 0.8s ease-out'
+        }}>
+          <SafetyCertificateOutlined style={{ color: '#10b981', fontSize: '18px' }} />
+          <span style={{ fontSize: '14px', fontWeight: '500' }}>Được tin dùng bởi 50+ Bệnh viện hàng đầu Việt Nam</span>
+        </div>
         
         <h1 style={{ 
-          fontSize: '60px', 
+          fontSize: '72px', 
           fontWeight: '900', 
           marginBottom: '24px',
-          lineHeight: '1.15',
+          lineHeight: '1.1',
           animation: 'fadeInUp 0.8s ease-out',
-          textShadow: '0 4px 20px rgba(0,0,0,0.3)'
+          textShadow: '0 4px 30px rgba(0,0,0,0.4)',
+          letterSpacing: '-1px',
+          maxWidth: '1000px'
         }}>
-          Hệ Thống Quản Lý Y Tế <br /> <span style={{ color: '#a5f3fc' }}>Tích Hợp & Hiện Đại</span>
+          Nền Tảng Y Tế Số <br /> 
+          <span style={{ 
+            background: 'linear-gradient(90deg, #a5f3fc 0%, #67e8f9 50%, #22d3ee 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>Thông Minh & Toàn Diện</span>
         </h1>
         <p style={{ 
           fontSize: '22px', 
-          color: '#e0f7fa',
+          color: 'rgba(255, 255, 255, 0.9)',
           marginBottom: '50px',
-          maxWidth: '750px',
-          margin: '0 auto 50px',
-          lineHeight: '1.7',
+          maxWidth: '800px',
+          margin: '0 auto 40px',
+          lineHeight: '1.8',
           animation: 'fadeInUp 0.8s ease-out 0.2s both'
         }}>
-          Tự động hóa quy trình y tế, tăng hiệu suất lên 40%, giảm lỗi 60%, nâng cao trải nghiệm bệnh nhân
+          Số hóa toàn bộ quy trình y tế với công nghệ AI tiên tiến. Tăng hiệu suất <strong style={{ color: '#22d3ee' }}>40%</strong>, 
+          giảm lỗi <strong style={{ color: '#22d3ee' }}>60%</strong>, tiết kiệm chi phí <strong style={{ color: '#22d3ee' }}>30%</strong>
         </p>
+
+        {/* Feature Pills */}
+        <div style={{ 
+          display: 'flex', 
+          gap: '12px', 
+          justifyContent: 'center', 
+          flexWrap: 'wrap',
+          marginBottom: '40px',
+          animation: 'fadeInUp 0.8s ease-out 0.3s both'
+        }}>
+          {['🔒 Bảo mật HIPAA', '⚡ Realtime', '🤖 AI Powered', '📱 Responsive'].map((pill, i) => (
+            <span key={i} style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(5px)',
+              padding: '8px 16px',
+              borderRadius: '20px',
+              fontSize: '13px',
+              border: '1px solid rgba(255, 255, 255, 0.2)'
+            }}>{pill}</span>
+          ))}
+        </div>
+
         <Space size="large" wrap style={{ animation: 'fadeInUp 0.8s ease-out 0.4s both' }}>
           <Button 
             type="primary"
             size="large"
             onClick={() => navigate('/superadmin/register')}
             style={{
-              background: '#ffffff',
-              color: '#0099cc',
+              background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
+              color: '#0077aa',
               border: 'none',
-              height: '56px',
+              height: '60px',
               fontSize: '18px',
-              fontWeight: '600',
-              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.15)',
-              transition: 'all 0.3s ease'
+              fontWeight: '700',
+              padding: '0 40px',
+              borderRadius: '30px',
+              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+              transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'scale(1.05)';
-              e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.2)';
+              e.currentTarget.style.transform = 'translateY(-5px) scale(1.05)';
+              e.currentTarget.style.boxShadow = '0 20px 50px rgba(0, 0, 0, 0.3)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.15)';
+              e.currentTarget.style.transform = 'translateY(0) scale(1)';
+              e.currentTarget.style.boxShadow = '0 10px 40px rgba(0, 0, 0, 0.2)';
             }}
           >
-            Bắt Đầu Miễn Phí <ArrowRightOutlined />
+            <RocketOutlined style={{ marginRight: '8px' }} /> Bắt Đầu Miễn Phí
           </Button>
           <Button 
             size="large"
             style={{
-              background: 'transparent',
+              background: 'rgba(255, 255, 255, 0.1)',
+              backdropFilter: 'blur(10px)',
               color: '#ffffff',
-              border: '2px solid #ffffff',
-              height: '56px',
+              border: '2px solid rgba(255, 255, 255, 0.3)',
+              height: '60px',
               fontSize: '18px',
-              transition: 'all 0.3s ease'
+              padding: '0 40px',
+              borderRadius: '30px',
+              transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
-              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.background = 'rgba(255,255,255,0.2)';
+              e.currentTarget.style.transform = 'translateY(-5px)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = 'transparent';
-              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)';
             }}
           >
-            📅 Đặt Demo
+            <PlayCircleOutlined style={{ marginRight: '8px' }} /> Xem Demo
           </Button>
         </Space>
 
-        {/* Social Proof Stats */}
-        <Row gutter={[32, 32]} style={{ marginTop: '80px', maxWidth: '1100px', margin: '80px auto 0' }}>
+        {/* Social Proof Stats - Glass morphism */}
+        <Row gutter={[24, 24]} style={{ marginTop: '80px', maxWidth: '1200px', margin: '80px auto 0' }}>
           {[
-            { number: '50+', label: 'Bệnh Viện / Phòng Khám' },
-            { number: '15,000+', label: 'Người Dùng Tích Cực' },
-            { number: '500K+', label: 'Hồ Sơ Bệnh Nhân' },
-            { number: '99.9%', label: 'Uptime Guarantee' }
+            { number: '50+', label: 'Bệnh Viện / Phòng Khám', icon: '🏥' },
+            { number: '15K+', label: 'Người Dùng Tích Cực', icon: '👥' },
+            { number: '500K+', label: 'Hồ Sơ Bệnh Nhân', icon: '📋' },
+            { number: '99.9%', label: 'Uptime Guarantee', icon: '⚡' }
           ].map((stat, idx) => (
-            <Col xs={24} sm={12} md={6} key={idx}>
+            <Col xs={12} sm={12} md={6} key={idx}>
               <div 
                 style={{
-                  animation: `fadeInUp 0.8s ease-out ${0.6 + idx * 0.1}s both`
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '20px',
+                  padding: '24px 16px',
+                  border: '1px solid rgba(255, 255, 255, 0.15)',
+                  animation: `fadeInUp 0.8s ease-out ${0.6 + idx * 0.15}s both`,
+                  transition: 'all 0.3s ease'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-8px)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.15)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
                 }}
               >
-                <div style={{ fontSize: '36px', fontWeight: '800', marginBottom: '8px' }}>{stat.number}</div>
-                <div style={{ fontSize: '14px', color: '#a5f3fc' }}>{stat.label}</div>
+                <div style={{ fontSize: '32px', marginBottom: '8px' }}>{stat.icon}</div>
+                <div style={{ fontSize: '36px', fontWeight: '800', marginBottom: '4px', background: 'linear-gradient(180deg, #fff 0%, #a5f3fc 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>{stat.number}</div>
+                <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.7)' }}>{stat.label}</div>
               </div>
             </Col>
           ))}
@@ -507,45 +647,138 @@ const HomePage = () => {
       </div>
 
       {/* ===== BENEFITS FOR ROLES ===== */}
-      <div style={{ padding: '80px 40px', background: '#f8fdfb' }}>
-        <h2 style={{ 
-          fontSize: '44px', 
-          fontWeight: '800', 
-          color: '#0099cc',
-          textAlign: 'center',
-          marginBottom: '60px'
-        }}>
-          ✨ Lợi Ích Cho Mỗi Vai Trò
-        </h2>
-        <Row gutter={[32, 32]}>
+      {/* ===== BENEFITS FOR ROLES - PREMIUM ===== */}
+      <div style={{ 
+        padding: '100px 40px', 
+        background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        {/* Background decorations */}
+        <div style={{ 
+          position: 'absolute', 
+          width: '400px', 
+          height: '400px', 
+          background: 'radial-gradient(circle, rgba(0, 153, 204, 0.08) 0%, transparent 70%)', 
+          top: '-100px', 
+          left: '-100px' 
+        }} />
+        <div style={{ 
+          position: 'absolute', 
+          width: '300px', 
+          height: '300px', 
+          background: 'radial-gradient(circle, rgba(6, 182, 212, 0.08) 0%, transparent 70%)', 
+          bottom: '-50px', 
+          right: '-50px' 
+        }} />
+
+        <div style={{ textAlign: 'center', marginBottom: '60px', position: 'relative' }}>
+          <span style={{
+            display: 'inline-block',
+            background: 'linear-gradient(135deg, #0099cc 0%, #06b6d4 100%)',
+            color: '#fff',
+            padding: '6px 16px',
+            borderRadius: '20px',
+            fontSize: '13px',
+            fontWeight: '600',
+            marginBottom: '16px'
+          }}>LỢI ÍCH</span>
+          <h2 style={{ 
+            fontSize: '48px', 
+            fontWeight: '800', 
+            background: 'linear-gradient(135deg, #0077aa 0%, #0099cc 50%, #06b6d4 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            marginBottom: '16px'
+          }}>
+            Giải Pháp Cho Mọi Vai Trò
+          </h2>
+          <p style={{ fontSize: '18px', color: '#64748b', maxWidth: '600px', margin: '0 auto' }}>
+            Tối ưu hóa quy trình làm việc cho từng đối tượng sử dụng
+          </p>
+        </div>
+
+        <Row gutter={[32, 32]} style={{ position: 'relative' }}>
           {benefits.map((benefit, idx) => (
             <Col xs={24} md={8} key={idx}>
               <Card
                 style={{
-                  border: '2px solid #a5f3fc',
-                  borderRadius: '16px',
+                  background: '#ffffff',
+                  border: 'none',
+                  borderRadius: '24px',
                   textAlign: 'center',
-                  transition: 'all 0.3s ease',
-                  height: '100%'
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  height: '100%',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+                  position: 'relative',
+                  overflow: 'hidden'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-12px)';
-                  e.currentTarget.style.boxShadow = '0 16px 32px rgba(0, 153, 204, 0.2)';
+                  e.currentTarget.style.transform = 'translateY(-16px)';
+                  e.currentTarget.style.boxShadow = '0 25px 50px rgba(0, 153, 204, 0.15)';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 153, 204, 0.08)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.05)';
                 }}
               >
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>{benefit.icon}</div>
-                <h3 style={{ color: '#0099cc', fontSize: '20px', fontWeight: '700', marginBottom: '20px' }}>
+                {/* Top gradient line */}
+                <div style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '4px',
+                  background: `linear-gradient(90deg, ${idx === 0 ? '#0099cc' : idx === 1 ? '#06b6d4' : '#22d3ee'} 0%, ${idx === 0 ? '#06b6d4' : idx === 1 ? '#22d3ee' : '#67e8f9'} 100%)`
+                }} />
+                
+                <div style={{ 
+                  width: '80px', 
+                  height: '80px', 
+                  background: `linear-gradient(135deg, ${idx === 0 ? 'rgba(0, 153, 204, 0.1)' : idx === 1 ? 'rgba(6, 182, 212, 0.1)' : 'rgba(34, 211, 238, 0.1)'} 0%, transparent 100%)`,
+                  borderRadius: '20px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 20px',
+                  fontSize: '48px'
+                }}>
+                  {benefit.icon}
+                </div>
+                
+                <h3 style={{ 
+                  color: '#0077aa', 
+                  fontSize: '22px', 
+                  fontWeight: '700', 
+                  marginBottom: '24px' 
+                }}>
                   {benefit.title}
                 </h3>
                 <div style={{ textAlign: 'left' }}>
                   {benefit.items.map((item, i) => (
-                    <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: '12px' }}>
-                      <CheckOutlined style={{ color: '#10b981', marginRight: '10px', fontSize: '16px', fontWeight: 'bold' }} />
-                      <span style={{ color: '#1e293b', fontSize: '14px' }}>{item}</span>
+                    <div key={i} style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      marginBottom: '14px',
+                      padding: '8px 12px',
+                      background: '#f8fafc',
+                      borderRadius: '8px',
+                      transition: 'all 0.3s ease'
+                    }}>
+                      <div style={{
+                        width: '24px',
+                        height: '24px',
+                        borderRadius: '50%',
+                        background: 'linear-gradient(135deg, #10b981 0%, #34d399 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginRight: '12px',
+                        flexShrink: 0
+                      }}>
+                        <CheckOutlined style={{ color: '#fff', fontSize: '12px' }} />
+                      </div>
+                      <span style={{ color: '#334155', fontSize: '14px', fontWeight: '500' }}>{item}</span>
                     </div>
                   ))}
                 </div>
@@ -555,45 +788,123 @@ const HomePage = () => {
         </Row>
       </div>
 
-      {/* ===== 6 CORE FEATURES - DETAILED ===== */}
-      <div style={{ padding: '80px 40px', background: '#ffffff' }}>
-        <h2 style={{ 
-          fontSize: '44px', 
-          fontWeight: '800', 
-          color: '#0099cc',
-          textAlign: 'center',
-          marginBottom: '60px'
-        }}>
-          🎯 6 Tính Năng Core Chi Tiết
-        </h2>
+      {/* ===== 6 CORE FEATURES - PREMIUM ===== */}
+      <div style={{ 
+        padding: '100px 40px', 
+        background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+        position: 'relative'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+          <span style={{
+            display: 'inline-block',
+            background: 'linear-gradient(135deg, #0099cc 0%, #06b6d4 100%)',
+            color: '#fff',
+            padding: '6px 16px',
+            borderRadius: '20px',
+            fontSize: '13px',
+            fontWeight: '600',
+            marginBottom: '16px'
+          }}>TÍNH NĂNG</span>
+          <h2 style={{ 
+            fontSize: '48px', 
+            fontWeight: '800', 
+            background: 'linear-gradient(135deg, #0077aa 0%, #0099cc 50%, #06b6d4 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            marginBottom: '16px'
+          }}>
+            Tính Năng Nổi Bật
+          </h2>
+          <p style={{ fontSize: '18px', color: '#64748b', maxWidth: '600px', margin: '0 auto' }}>
+            Công nghệ tiên tiến, bảo mật tối đa, trải nghiệm mượt mà
+          </p>
+        </div>
         <Row gutter={[24, 24]}>
           {features.map((feature, idx) => (
-            <Col xs={24} md={12} key={idx}>
-              <Card style={{
-                border: '2px solid #a5f3fc',
-                borderRadius: '12px',
-                padding: '24px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
-                  <div style={{ fontSize: '40px', minWidth: '50px' }}>
+            <Col xs={24} md={12} lg={8} key={idx}>
+              <Card 
+                style={{
+                  background: activeFeature === idx ? 'linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%)' : '#ffffff',
+                  border: activeFeature === idx ? '2px solid #0099cc' : '1px solid #e2e8f0',
+                  borderRadius: '20px',
+                  height: '100%',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  boxShadow: activeFeature === idx ? '0 20px 40px rgba(0, 153, 204, 0.15)' : '0 4px 15px rgba(0, 0, 0, 0.05)',
+                  transform: activeFeature === idx ? 'translateY(-8px) scale(1.02)' : 'translateY(0) scale(1)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-12px) scale(1.02)';
+                  e.currentTarget.style.boxShadow = '0 25px 50px rgba(0, 153, 204, 0.2)';
+                  e.currentTarget.style.border = '2px solid #0099cc';
+                }}
+                onMouseLeave={(e) => {
+                  if (activeFeature !== idx) {
+                    e.currentTarget.style.transform = 'translateY(0) scale(1)';
+                    e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.05)';
+                    e.currentTarget.style.border = '1px solid #e2e8f0';
+                  }
+                }}
+              >
+                {/* Number badge */}
+                <div style={{
+                  position: 'absolute',
+                  top: '16px',
+                  right: '16px',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #0099cc 0%, #06b6d4 100%)',
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '14px',
+                  fontWeight: '700'
+                }}>
+                  {idx + 1}
+                </div>
+
+                <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+                  <div style={{ 
+                    width: '70px', 
+                    height: '70px', 
+                    background: 'linear-gradient(135deg, rgba(0, 153, 204, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%)',
+                    borderRadius: '16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 16px'
+                  }}>
                     {feature.icon}
                   </div>
-                  <div>
-                    <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0099cc', marginBottom: '8px' }}>
-                      {feature.title}
-                    </h3>
-                    <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px' }}>
-                      {feature.description}
-                    </p>
-                    <div>
-                      {feature.details.map((detail, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-                          <CheckOutlined style={{ color: '#10b981', marginRight: '10px', fontWeight: 'bold' }} />
-                          <span style={{ fontSize: '13px', color: '#1e293b' }}>{detail}</span>
-                        </div>
-                      ))}
+                  <h3 style={{ 
+                    fontSize: '18px', 
+                    fontWeight: '700', 
+                    color: '#0077aa', 
+                    marginBottom: '8px' 
+                  }}>
+                    {feature.title}
+                  </h3>
+                  <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px', lineHeight: '1.6' }}>
+                    {feature.description}
+                  </p>
+                </div>
+                <div>
+                  {feature.details.map((detail, i) => (
+                    <div key={i} style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      marginBottom: '10px',
+                      padding: '6px 10px',
+                      background: '#f8fafc',
+                      borderRadius: '6px'
+                    }}>
+                      <CheckCircleOutlined style={{ color: '#10b981', marginRight: '10px', fontSize: '14px' }} />
+                      <span style={{ fontSize: '13px', color: '#475569' }}>{detail}</span>
                     </div>
-                  </div>
+                  ))}
                 </div>
               </Card>
             </Col>
@@ -601,118 +912,202 @@ const HomePage = () => {
         </Row>
       </div>
 
-      {/* ===== USE CASES ===== */}
-      <div style={{ padding: '80px 40px', background: '#f8fdfb' }}>
-        <h2 style={{
-          fontSize: '44px',
-          fontWeight: '800',
-          color: '#0099cc',
-          textAlign: 'center',
-          marginBottom: '60px'
-        }}>
-          📌 Phù Hợp Với Các Loại Hình
-        </h2>
-        <Row gutter={[32, 32]}>
-          {benefits.map((useCase, idx) => (
-            <Col xs={24} md={8} key={idx}>
-              <Card style={{
-                border: '2px solid #e0f2fe',
-                borderRadius: '12px',
+      {/* ===== TECH STACK SECTION ===== */}
+      <div style={{ 
+        padding: '80px 40px', 
+        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
+        {/* Background pattern */}
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.05) 1px, transparent 0)',
+          backgroundSize: '40px 40px'
+        }} />
+        
+        <div style={{ textAlign: 'center', marginBottom: '50px', position: 'relative' }}>
+          <span style={{
+            display: 'inline-block',
+            background: 'rgba(0, 153, 204, 0.2)',
+            color: '#22d3ee',
+            padding: '6px 16px',
+            borderRadius: '20px',
+            fontSize: '13px',
+            fontWeight: '600',
+            marginBottom: '16px',
+            border: '1px solid rgba(34, 211, 238, 0.3)'
+          }}>CÔNG NGHỆ</span>
+          <h2 style={{ 
+            fontSize: '40px', 
+            fontWeight: '800', 
+            color: '#ffffff',
+            marginBottom: '16px'
+          }}>
+            Nền Tảng Công Nghệ Hiện Đại
+          </h2>
+          <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.6)', maxWidth: '500px', margin: '0 auto' }}>
+            Được xây dựng với các công nghệ hàng đầu thế giới
+          </p>
+        </div>
+        
+        <Row gutter={[20, 20]} justify="center" style={{ position: 'relative' }}>
+          {techStack.map((tech, idx) => (
+            <Col xs={12} sm={8} md={4} key={idx}>
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(10px)',
+                borderRadius: '16px',
+                padding: '24px 16px',
                 textAlign: 'center',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
                 transition: 'all 0.3s ease'
               }}
               onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
                 e.currentTarget.style.transform = 'translateY(-8px)';
-                e.currentTarget.style.boxShadow = '0 12px 24px rgba(0, 153, 204, 0.15)';
+                e.currentTarget.style.borderColor = 'rgba(34, 211, 238, 0.3)';
               }}
               onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
                 e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 153, 204, 0.08)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
               }}>
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>
-                  {useCase.icon}
-                </div>
-                <h3 style={{ fontSize: '20px', fontWeight: '700', color: '#0099cc', marginBottom: '12px' }}>
-                  {useCase.title}
-                </h3>
-                <p style={{ fontSize: '14px', color: '#64748b', marginBottom: '16px' }}>
-                  {useCase.description}
-                </p>
-                <div>
-                  {useCase.items.map((item, i) => (
-                    <div key={i} style={{ fontSize: '13px', color: '#0077aa', marginBottom: '8px' }}>
-                      ✓ {item}
-                    </div>
-                  ))}
-                </div>
-              </Card>
+                <div style={{ fontSize: '40px', marginBottom: '12px' }}>{tech.icon}</div>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#fff', marginBottom: '4px' }}>{tech.name}</div>
+                <div style={{ fontSize: '12px', color: 'rgba(255,255,255,0.5)' }}>{tech.desc}</div>
+              </div>
             </Col>
           ))}
         </Row>
+
+        {/* Certifications */}
+        <div style={{ marginTop: '60px', textAlign: 'center', position: 'relative' }}>
+          <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '14px', marginBottom: '20px' }}>CHỨNG CHỈ BẢO MẬT</p>
+          <Row gutter={[16, 16]} justify="center">
+            {certifications.map((cert, idx) => (
+              <Col key={idx}>
+                <div style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  padding: '8px 16px',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)'
+                }}>
+                  <span style={{ fontSize: '20px' }}>{cert.icon}</span>
+                  <span style={{ color: '#fff', fontSize: '13px', fontWeight: '500' }}>{cert.name}</span>
+                </div>
+              </Col>
+            ))}
+          </Row>
+        </div>
       </div>
 
-      {/* ===== PRICING SECTION ===== */}
-      <div style={{ padding: '80px 40px', background: 'linear-gradient(135deg, #f8fdfb 0%, #f5f8ff 100%)' }}>
-        <h2 style={{ 
-          fontSize: '44px', 
-          fontWeight: '800', 
-          color: '#0099cc',
-          textAlign: 'center',
-          marginBottom: '20px'
-        }}>
-          💰 Bảng Giá Minh Bạch
-        </h2>
-        <p style={{ 
-          fontSize: '18px', 
-          color: '#0077aa',
-          textAlign: 'center',
-          marginBottom: '60px'
-        }}>
-          Chọn gói phù hợp với quy mô và nhu cầu của bệnh viện bạn
-        </p>
-        <Row gutter={[24, 24]}>
+      {/* ===== PRICING SECTION - PREMIUM ===== */}
+      <div style={{ 
+        padding: '100px 40px', 
+        background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)',
+        position: 'relative'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+          <span style={{
+            display: 'inline-block',
+            background: 'linear-gradient(135deg, #0099cc 0%, #06b6d4 100%)',
+            color: '#fff',
+            padding: '6px 16px',
+            borderRadius: '20px',
+            fontSize: '13px',
+            fontWeight: '600',
+            marginBottom: '16px'
+          }}>BẢNG GIÁ</span>
+          <h2 style={{ 
+            fontSize: '48px', 
+            fontWeight: '800', 
+            background: 'linear-gradient(135deg, #0077aa 0%, #0099cc 50%, #06b6d4 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            marginBottom: '16px'
+          }}>
+            Chọn Gói Phù Hợp
+          </h2>
+          <p style={{ fontSize: '18px', color: '#64748b', maxWidth: '600px', margin: '0 auto' }}>
+            Minh bạch, linh hoạt, không phí ẩn
+          </p>
+        </div>
+        <Row gutter={[24, 24]} justify="center">
           {pricingPlans.map((plan, index) => (
             <Col xs={24} md={8} key={index}>
               <Card
                 style={{
                   border: plan.popular ? '2px solid #0099cc' : '1px solid #e0f2fe',
-                  borderRadius: '16px',
-                  background: plan.popular ? 'linear-gradient(135deg, #f8fdfb 0%, #ffffff 100%)' : '#ffffff',
-                  transition: 'all 0.3s ease',
+                  borderRadius: '24px',
+                  background: plan.popular ? 'linear-gradient(135deg, #f0f9ff 0%, #ffffff 100%)' : '#ffffff',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
                   height: '100%',
                   position: 'relative',
-                  boxShadow: plan.popular ? '0 16px 32px rgba(0, 153, 204, 0.2)' : '0 2px 8px rgba(0, 153, 204, 0.08)',
-                  transform: plan.popular ? 'scale(1.05)' : 'scale(1)'
+                  boxShadow: plan.popular ? '0 25px 50px rgba(0, 153, 204, 0.2)' : '0 4px 20px rgba(0, 0, 0, 0.05)',
+                  transform: plan.popular ? 'scale(1.05)' : 'scale(1)',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  if (!plan.popular) {
+                    e.currentTarget.style.transform = 'translateY(-12px) scale(1.02)';
+                    e.currentTarget.style.boxShadow = '0 25px 50px rgba(0, 153, 204, 0.15)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!plan.popular) {
+                    e.currentTarget.style.transform = 'scale(1)';
+                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.05)';
+                  }
                 }}
               >
                 {plan.popular && (
                   <div style={{
                     position: 'absolute',
-                    top: '-12px',
-                    left: '50%',
-                    transform: 'translateX(-50%)',
-                    background: 'linear-gradient(135deg, #0099cc 0%, #0077aa 100%)',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '4px',
+                    background: 'linear-gradient(90deg, #0099cc 0%, #06b6d4 50%, #22d3ee 100%)'
+                  }} />
+                )}
+                {plan.popular && (
+                  <div style={{
+                    position: 'absolute',
+                    top: '16px',
+                    right: '16px',
+                    background: 'linear-gradient(135deg, #0099cc 0%, #06b6d4 100%)',
                     color: '#ffffff',
-                    padding: '4px 16px',
-                    borderRadius: '20px',
-                    fontSize: '12px',
+                    padding: '4px 12px',
+                    borderRadius: '12px',
+                    fontSize: '11px',
                     fontWeight: '700'
                   }}>
-                    ⭐ MỚI PHỔ BIẾN
+                    ⭐ PHỔ BIẾN
                   </div>
                 )}
-                <h3 style={{ fontSize: '24px', fontWeight: '700', color: '#0099cc', marginBottom: '8px' }}>
+                <h3 style={{ fontSize: '24px', fontWeight: '700', color: '#0077aa', marginBottom: '8px' }}>
                   {plan.name}
                 </h3>
                 <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>
                   {plan.description}
                 </p>
                 <div style={{ marginBottom: '24px' }}>
-                  <div style={{ fontSize: '36px', fontWeight: '800', color: '#0099cc' }}>
+                  <div style={{ 
+                    fontSize: '42px', 
+                    fontWeight: '800', 
+                    background: 'linear-gradient(135deg, #0077aa 0%, #0099cc 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent'
+                  }}>
                     {plan.price}
-                    <span style={{ fontSize: '16px', color: '#0077aa' }}>{plan.period}</span>
+                    <span style={{ fontSize: '16px', color: '#64748b', WebkitTextFillColor: '#64748b' }}>{plan.period}</span>
                   </div>
-                  <div style={{ fontSize: '13px', color: '#64748b', marginTop: '8px' }}>
+                  <div style={{ fontSize: '13px', color: '#94a3b8', marginTop: '8px' }}>
                     {plan.users}
                   </div>
                 </div>
@@ -744,70 +1139,123 @@ const HomePage = () => {
         </Row>
       </div>
 
-      {/* ===== TESTIMONIALS SECTION ===== */}
-      <div style={{ padding: '80px 40px', background: '#ffffff' }}>
-        <h2 style={{ 
-          fontSize: '44px', 
-          fontWeight: '800', 
-          color: '#0099cc',
-          textAlign: 'center',
-          marginBottom: '60px'
-        }}>
-          ⭐ Phản Hồi Từ Khách Hàng
-        </h2>
+      {/* ===== TESTIMONIALS SECTION - PREMIUM ===== */}
+      <div style={{ 
+        padding: '100px 40px', 
+        background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+        position: 'relative'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+          <span style={{
+            display: 'inline-block',
+            background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+            color: '#fff',
+            padding: '6px 16px',
+            borderRadius: '20px',
+            fontSize: '13px',
+            fontWeight: '600',
+            marginBottom: '16px'
+          }}>ĐÁNH GIÁ</span>
+          <h2 style={{ 
+            fontSize: '48px', 
+            fontWeight: '800', 
+            background: 'linear-gradient(135deg, #0077aa 0%, #0099cc 50%, #06b6d4 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            marginBottom: '16px'
+          }}>
+            Khách Hàng Nói Gì?
+          </h2>
+          <p style={{ fontSize: '18px', color: '#64748b', maxWidth: '600px', margin: '0 auto' }}>
+            Hơn 15,000 người dùng tin tưởng sử dụng mỗi ngày
+          </p>
+        </div>
         <Row gutter={[24, 24]}>
           {testimonials.map((testimonial, index) => (
             <Col xs={24} md={8} key={index}>
               <Card
                 style={{
-                  border: '1px solid #a5f3fc',
-                  borderRadius: '12px',
-                  background: '#ffffff'
+                  border: 'none',
+                  borderRadius: '24px',
+                  background: '#ffffff',
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.05)',
+                  height: '100%',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-12px)';
+                  e.currentTarget.style.boxShadow = '0 25px 50px rgba(0, 153, 204, 0.12)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.05)';
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                {/* Quote icon */}
+                <div style={{
+                  position: 'absolute',
+                  top: '20px',
+                  right: '20px',
+                  fontSize: '48px',
+                  color: 'rgba(0, 153, 204, 0.1)',
+                  fontFamily: 'serif'
+                }}>"</div>
+
+                <div style={{ display: 'flex', gap: '2px', marginBottom: '16px' }}>
                   {[...Array(testimonial.rating)].map((_, i) => (
-                    <StarOutlined key={i} style={{ color: '#fbbf24', fontSize: '18px', marginRight: '4px' }} />
+                    <StarOutlined key={i} style={{ color: '#fbbf24', fontSize: '16px' }} />
                   ))}
                 </div>
-                <p style={{ fontSize: '16px', color: '#1e293b', marginBottom: '20px', fontStyle: 'italic', lineHeight: '1.6' }}>
+                <p style={{ 
+                  fontSize: '15px', 
+                  color: '#334155', 
+                  marginBottom: '24px', 
+                  lineHeight: '1.7',
+                  position: 'relative',
+                  zIndex: 1
+                }}>
                   "{testimonial.content}"
                 </p>
-                <div style={{ borderTop: '1px solid #e0f2fe', paddingTop: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                    <img 
-                      src={testimonial.image} 
-                      alt={testimonial.name}
-                      style={{ 
-                        width: '50px', 
-                        height: '50px', 
-                        borderRadius: '50%', 
-                        marginRight: '12px',
-                        objectFit: 'cover',
-                        border: '2px solid #0099cc'
-                      }}
-                    />
-                    <div>
-                      <p style={{ 
-                        fontSize: '14px', 
-                        fontWeight: '700', 
-                        color: '#0099cc',
-                        margin: '0'
-                      }}>
-                        {testimonial.name}
-                      </p>
-                      <p style={{ 
-                        fontSize: '12px', 
-                        color: '#0077aa',
-                        margin: '0'
-                      }}>
-                        {testimonial.role}
-                      </p>
-                    </div>
+                <div style={{ 
+                  borderTop: '1px solid #f1f5f9', 
+                  paddingTop: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px'
+                }}>
+                  <img 
+                    src={testimonial.image} 
+                    alt={testimonial.name}
+                    style={{ 
+                      width: '56px', 
+                      height: '56px', 
+                      borderRadius: '50%', 
+                      objectFit: 'cover',
+                      border: '3px solid #e0f2fe'
+                    }}
+                  />
+                  <div>
+                    <p style={{ 
+                      fontSize: '15px', 
+                      fontWeight: '700', 
+                      color: '#0077aa',
+                      margin: '0 0 2px 0'
+                    }}>
+                      {testimonial.name}
+                    </p>
+                    <p style={{ 
+                      fontSize: '13px', 
+                      color: '#64748b',
+                      margin: '0'
+                    }}>
+                      {testimonial.role}
+                    </p>
+                    <p style={{ fontSize: '11px', color: '#94a3b8', margin: '2px 0 0 0' }}>
+                      {testimonial.hospital}
+                    </p>
                   </div>
-                  <p style={{ fontSize: '11px', color: '#64748b', margin: '8px 0 0 0' }}>
-                    {testimonial.hospital}
-                  </p>
                 </div>
               </Card>
             </Col>
@@ -815,87 +1263,164 @@ const HomePage = () => {
         </Row>
       </div>
 
-      {/* ===== TEAM SECTION ===== */}
-      <div style={{ padding: '80px 40px', background: '#f8fafc' }}>
-        <h2 style={{ 
-          fontSize: '44px', 
-          fontWeight: '800', 
-          color: '#0077aa',
-          textAlign: 'center',
-          marginBottom: '20px'
-        }}>
-          👥 Đội Ngũ Của Chúng Tôi
-        </h2>
-        <p style={{ textAlign: 'center', color: '#64748b', fontSize: '18px', marginBottom: '50px', maxWidth: '600px', margin: '0 auto 50px' }}>
-          Những chuyên gia hàng đầu trong lĩnh vực công nghệ y tế
+      {/* ===== TEAM SECTION - PREMIUM ===== */}
+      <div style={{ 
+        padding: '100px 40px', 
+        background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)',
+        position: 'relative'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+          <span style={{
+            display: 'inline-block',
+            background: 'linear-gradient(135deg, #0099cc 0%, #06b6d4 100%)',
+            color: '#fff',
+            padding: '6px 16px',
+            borderRadius: '20px',
+            fontSize: '13px',
+            fontWeight: '600',
+            marginBottom: '16px'
+          }}>ĐỘI NGŨ</span>
+          <h2 style={{ 
+            fontSize: '48px', 
+            fontWeight: '800', 
+            background: 'linear-gradient(135deg, #0077aa 0%, #0099cc 50%, #06b6d4 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            marginBottom: '16px'
+          }}>
+            Những Con Người Tuyệt Vời
+          </h2>
+          <p style={{ fontSize: '18px', color: '#64748b', maxWidth: '600px', margin: '0 auto' }}>
+            Chuyên gia hàng đầu trong lĩnh vực công nghệ y tế
         </p>
+        </div>
         <Row gutter={[32, 32]} justify="center">
           {teamMembers.map((member, idx) => (
             <Col xs={24} sm={12} md={6} key={idx}>
               <Card 
-                hoverable
                 style={{
-                  borderRadius: '16px',
+                  borderRadius: '24px',
                   textAlign: 'center',
                   border: 'none',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                  overflow: 'hidden'
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                  overflow: 'hidden',
+                  background: '#ffffff',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-12px)';
+                  e.currentTarget.style.boxShadow = '0 25px 50px rgba(0, 153, 204, 0.12)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.05)';
                 }}
               >
-                <img 
-                  src={member.image} 
-                  alt={member.name}
-                  style={{ 
-                    width: '120px', 
-                    height: '120px', 
-                    borderRadius: '50%', 
-                    objectFit: 'cover',
-                    border: '4px solid #0099cc',
-                    marginBottom: '16px'
-                  }}
-                />
+                <div style={{ position: 'relative', display: 'inline-block', marginBottom: '20px' }}>
+                  <img 
+                    src={member.image} 
+                    alt={member.name}
+                    style={{ 
+                      width: '130px', 
+                      height: '130px', 
+                      borderRadius: '50%', 
+                      objectFit: 'cover',
+                      border: '4px solid #e0f2fe'
+                    }}
+                  />
+                  {/* Online indicator */}
+                  <div style={{
+                    position: 'absolute',
+                    bottom: '8px',
+                    right: '8px',
+                    width: '20px',
+                    height: '20px',
+                    borderRadius: '50%',
+                    background: '#10b981',
+                    border: '3px solid #fff'
+                  }} />
+                </div>
                 <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0077aa', marginBottom: '4px' }}>
                   {member.name}
                 </h3>
-                <p style={{ fontSize: '14px', color: '#0099cc', fontWeight: '600', marginBottom: '8px' }}>
+                <p style={{ 
+                  fontSize: '13px', 
+                  color: '#fff',
+                  fontWeight: '600', 
+                  marginBottom: '12px',
+                  display: 'inline-block',
+                  background: 'linear-gradient(135deg, #0099cc 0%, #06b6d4 100%)',
+                  padding: '4px 12px',
+                  borderRadius: '12px'
+                }}>
                   {member.role}
                 </p>
-                <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>
+                <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '8px' }}>
                   {member.expertise}
                 </p>
-                <p style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic' }}>
+                <p style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic', lineHeight: '1.5' }}>
                   {member.bio}
                 </p>
+                {/* Social icons */}
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginTop: '16px' }}>
+                  <LinkedinOutlined style={{ fontSize: '18px', color: '#94a3b8', cursor: 'pointer' }} />
+                  <TwitterOutlined style={{ fontSize: '18px', color: '#94a3b8', cursor: 'pointer' }} />
+                </div>
               </Card>
             </Col>
           ))}
         </Row>
       </div>
 
-      {/* ===== BLOG SECTION ===== */}
-      <div style={{ padding: '80px 40px', background: '#ffffff' }}>
-        <h2 style={{ 
-          fontSize: '44px', 
-          fontWeight: '800', 
-          color: '#0077aa',
-          textAlign: 'center',
-          marginBottom: '20px'
-        }}>
-          📰 Tin Tức & Bài Viết
-        </h2>
-        <p style={{ textAlign: 'center', color: '#64748b', fontSize: '18px', marginBottom: '50px', maxWidth: '600px', margin: '0 auto 50px' }}>
-          Cập nhật những xu hướng mới nhất trong công nghệ y tế
-        </p>
+      {/* ===== BLOG SECTION - PREMIUM ===== */}
+      <div style={{ 
+        padding: '100px 40px', 
+        background: 'linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+        position: 'relative'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '60px' }}>
+          <span style={{
+            display: 'inline-block',
+            background: 'linear-gradient(135deg, #0099cc 0%, #06b6d4 100%)',
+            color: '#fff',
+            padding: '6px 16px',
+            borderRadius: '20px',
+            fontSize: '13px',
+            fontWeight: '600',
+            marginBottom: '16px'
+          }}>TIN TỨC</span>
+          <h2 style={{ 
+            fontSize: '48px', 
+            fontWeight: '800', 
+            background: 'linear-gradient(135deg, #0077aa 0%, #0099cc 50%, #06b6d4 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            marginBottom: '16px'
+          }}>
+            Bài Viết Mới Nhất
+          </h2>
+          <p style={{ fontSize: '18px', color: '#64748b', maxWidth: '600px', margin: '0 auto' }}>
+            Cập nhật những xu hướng mới nhất trong công nghệ y tế
+          </p>
+        </div>
         <Row gutter={[32, 32]}>
           {blogPosts.map((post, idx) => (
             <Col xs={24} md={8} key={idx}>
               <Card 
-                hoverable
                 style={{
-                  borderRadius: '16px',
+                  borderRadius: '24px',
                   overflow: 'hidden',
                   border: 'none',
-                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.05)',
+                  transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-12px)';
+                  e.currentTarget.style.boxShadow = '0 25px 50px rgba(0, 153, 204, 0.12)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)';
+                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.05)';
                 }}
                 cover={
                   <div style={{ position: 'relative', overflow: 'hidden' }}>
@@ -1045,36 +1570,142 @@ const HomePage = () => {
                 block
                 size="large"
                 style={{
-                  background: '#ffffff',
-                  color: '#0099cc',
+                  background: 'linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%)',
+                  color: '#0077aa',
                   border: 'none',
-                  fontWeight: '600',
-                  borderRadius: '8px'
+                  fontWeight: '700',
+                  borderRadius: '12px',
+                  height: '48px'
                 }}
               >
-                Gửi Liên Hệ
+                <RocketOutlined style={{ marginRight: '8px' }} /> Gửi Liên Hệ
               </Button>
             </Form>
           </Col>
         </Row>
       </div>
 
-      {/* ===== FOOTER ===== */}
+      {/* ===== FOOTER - PREMIUM ===== */}
       <div style={{
-        padding: '40px',
-        background: '#1e3a8a',
-        color: '#a5f3fc',
-        textAlign: 'center'
+        padding: '60px 40px 30px',
+        background: 'linear-gradient(180deg, #0f172a 0%, #1e293b 100%)',
+        color: '#94a3b8'
       }}>
-        <p style={{ marginBottom: '8px', fontSize: '14px' }}>
-          © 2025 Healthcare System - Hệ Thống Quản Lý Y Tế Hiện Đại
-        </p>
-        <Space split="|" style={{ color: '#a5f3fc', fontSize: '12px' }}>
-          <a href="#" style={{ color: '#a5f3fc' }}>Điều Khoản Dịch Vụ</a>
-          <a href="#" style={{ color: '#a5f3fc' }}>Chính Sách Bảo Mật</a>
-          <a href="#" style={{ color: '#a5f3fc' }}>Liên Hệ</a>
-          <a href="#" style={{ color: '#a5f3fc' }}>Blog</a>
-        </Space>
+        <Row gutter={[40, 40]} style={{ maxWidth: '1200px', margin: '0 auto' }}>
+          <Col xs={24} md={8}>
+            <Logo size="medium" showText={true} />
+            <p style={{ marginTop: '16px', fontSize: '14px', lineHeight: '1.8', color: '#94a3b8' }}>
+              Nền tảng quản lý y tế số hàng đầu Việt Nam, giúp tối ưu quy trình và nâng cao chất lượng chăm sóc bệnh nhân.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <div style={{ 
+                width: '40px', 
+                height: '40px', 
+                borderRadius: '50%', 
+                background: 'rgba(255,255,255,0.1)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease'
+              }}>
+                <FacebookOutlined style={{ color: '#fff', fontSize: '18px' }} />
+              </div>
+              <div style={{ 
+                width: '40px', 
+                height: '40px', 
+                borderRadius: '50%', 
+                background: 'rgba(255,255,255,0.1)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}>
+                <LinkedinOutlined style={{ color: '#fff', fontSize: '18px' }} />
+              </div>
+              <div style={{ 
+                width: '40px', 
+                height: '40px', 
+                borderRadius: '50%', 
+                background: 'rgba(255,255,255,0.1)', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}>
+                <TwitterOutlined style={{ color: '#fff', fontSize: '18px' }} />
+              </div>
+            </div>
+          </Col>
+          <Col xs={12} md={4}>
+            <h4 style={{ color: '#fff', fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Sản Phẩm</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <a href="#" style={{ color: '#94a3b8', fontSize: '14px', transition: 'color 0.3s' }}>Tính năng</a>
+              <a href="#" style={{ color: '#94a3b8', fontSize: '14px' }}>Bảng giá</a>
+              <a href="#" style={{ color: '#94a3b8', fontSize: '14px' }}>Tích hợp</a>
+              <a href="#" style={{ color: '#94a3b8', fontSize: '14px' }}>API Docs</a>
+            </div>
+          </Col>
+          <Col xs={12} md={4}>
+            <h4 style={{ color: '#fff', fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Công Ty</h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <a href="#" style={{ color: '#94a3b8', fontSize: '14px' }}>Về chúng tôi</a>
+              <a href="#" style={{ color: '#94a3b8', fontSize: '14px' }}>Blog</a>
+              <a href="#" style={{ color: '#94a3b8', fontSize: '14px' }}>Tuyển dụng</a>
+              <a href="#" style={{ color: '#94a3b8', fontSize: '14px' }}>Liên hệ</a>
+            </div>
+          </Col>
+          <Col xs={24} md={8}>
+            <h4 style={{ color: '#fff', fontSize: '16px', fontWeight: '700', marginBottom: '20px' }}>Đăng Ký Nhận Tin</h4>
+            <p style={{ fontSize: '14px', marginBottom: '16px', color: '#94a3b8' }}>
+              Nhận thông tin mới nhất về công nghệ y tế
+            </p>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <Input 
+                placeholder="Email của bạn" 
+                style={{ 
+                  borderRadius: '8px', 
+                  background: 'rgba(255,255,255,0.1)', 
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  color: '#fff'
+                }} 
+              />
+              <Button 
+                type="primary" 
+                style={{ 
+                  background: 'linear-gradient(135deg, #0099cc 0%, #06b6d4 100%)', 
+                  border: 'none',
+                  borderRadius: '8px'
+                }}
+              >
+                Đăng ký
+              </Button>
+            </div>
+          </Col>
+        </Row>
+        
+        {/* Bottom footer */}
+        <div style={{ 
+          borderTop: '1px solid rgba(255,255,255,0.1)', 
+          marginTop: '40px', 
+          paddingTop: '24px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '16px',
+          maxWidth: '1200px',
+          margin: '40px auto 0'
+        }}>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+            © 2025 Healthcare System. All rights reserved.
+          </p>
+          <Space size={24} style={{ fontSize: '13px' }}>
+            <a href="#" style={{ color: '#64748b' }}>Điều khoản</a>
+            <a href="#" style={{ color: '#64748b' }}>Bảo mật</a>
+            <a href="#" style={{ color: '#64748b' }}>Cookie</a>
+          </Space>
+        </div>
       </div>
     </div>
   );
