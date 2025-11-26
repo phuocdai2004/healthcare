@@ -213,6 +213,40 @@ code {
   color: #0099cc;
 }
 
+/* DatePicker Styling */
+.ant-picker {
+  border-color: #a5f3fc !important;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+.ant-picker:hover {
+  border-color: #0099cc !important;
+}
+
+.ant-picker-focused {
+  border-color: #0099cc !important;
+  box-shadow: 0 0 0 2px rgba(0, 153, 204, 0.1) !important;
+}
+
+.ant-picker-dropdown .ant-picker-cell-selected .ant-picker-cell-inner {
+  background: #0099cc !important;
+}
+
+.ant-picker-dropdown .ant-picker-today-btn {
+  color: #0099cc;
+}
+
+/* Select Dropdown Styling */
+.ant-select-dropdown {
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 153, 204, 0.15);
+}
+
+.ant-select-item-option:hover {
+  background-color: #f0f9ff;
+}
+
 /* Tag & Badge Styling */
 .ant-tag {
   border-radius: 6px;

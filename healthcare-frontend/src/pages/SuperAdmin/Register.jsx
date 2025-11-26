@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Form, Input, Button, message, Spin, Divider, Row, Col, Select, DatePicker } from 'antd';
+import { Form, Input, Button, message, Spin, Divider, Row, Col } from 'antd';
 import { UserOutlined, MailOutlined, LockOutlined, PhoneOutlined, ArrowRightOutlined } from '@ant-design/icons';
 import { useAuth } from '../../contexts/AuthContext';
 import Logo from '../../components/Logo';
-import dayjs from 'dayjs';
 
 const SuperAdminRegister = () => {
   const [form] = Form.useForm();
@@ -21,6 +20,9 @@ const SuperAdminRegister = () => {
         password: values.password,
         confirmPassword: values.confirmPassword,
         name: `${values.firstName} ${values.lastName}`.trim(),
+        phone: values.phone,
+        dateOfBirth: values.dateOfBirth,
+        gender: values.gender,
         role: 'PATIENT'
       };
 
@@ -59,24 +61,13 @@ const SuperAdminRegister = () => {
         }}>
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-            <div style={{
-              display: 'inline-flex',
-              marginBottom: '16px'
-            }}>
+            <div style={{ display: 'inline-flex', marginBottom: '16px' }}>
               <Logo size="medium" showText={false} />
             </div>
-            <h1 style={{
-              fontSize: '28px',
-              fontWeight: '700',
-              color: '#0099cc',
-              marginBottom: '8px'
-            }}>
+            <h1 style={{ fontSize: '28px', fontWeight: '700', color: '#0099cc', marginBottom: '8px' }}>
               Đăng Ký Tài Khoản
             </h1>
-            <p style={{
-              color: '#0077aa',
-              fontSize: '14px'
-            }}>
+            <p style={{ color: '#0077aa', fontSize: '14px' }}>
               Tạo tài khoản mới để sử dụng Healthcare System
             </p>
           </div>
@@ -105,7 +96,6 @@ const SuperAdminRegister = () => {
                     placeholder="Ví dụ: Nguyễn"
                     size="large"
                     disabled={loading}
-                    style={{ borderColor: '#a5f3fc', borderRadius: '8px' }}
                   />
                 </Form.Item>
               </Col>
@@ -123,7 +113,6 @@ const SuperAdminRegister = () => {
                     placeholder="Ví dụ: Văn A"
                     size="large"
                     disabled={loading}
-                    style={{ borderColor: '#a5f3fc', borderRadius: '8px' }}
                   />
                 </Form.Item>
               </Col>
@@ -135,10 +124,7 @@ const SuperAdminRegister = () => {
               label={<span style={{ color: '#0099cc', fontWeight: '500' }}>Email</span>}
               rules={[
                 { required: true, message: 'Vui lòng nhập email' },
-                {
-                  type: 'email',
-                  message: 'Email không hợp lệ'
-                }
+                { type: 'email', message: 'Email không hợp lệ' }
               ]}
             >
               <Input
@@ -147,7 +133,6 @@ const SuperAdminRegister = () => {
                 size="large"
                 type="email"
                 disabled={loading}
-                style={{ borderColor: '#a5f3fc', borderRadius: '8px' }}
               />
             </Form.Item>
 
@@ -157,10 +142,7 @@ const SuperAdminRegister = () => {
               label={<span style={{ color: '#0099cc', fontWeight: '500' }}>Số điện thoại</span>}
               rules={[
                 { required: true, message: 'Vui lòng nhập số điện thoại' },
-                {
-                  pattern: /^[0-9]{10,11}$/,
-                  message: 'Số điện thoại phải có 10-11 chữ số'
-                }
+                { pattern: /^[0-9]{10,11}$/, message: 'Số điện thoại phải có 10-11 chữ số' }
               ]}
             >
               <Input
@@ -168,7 +150,6 @@ const SuperAdminRegister = () => {
                 placeholder="0901234567"
                 size="large"
                 disabled={loading}
-                style={{ borderColor: '#a5f3fc', borderRadius: '8px' }}
               />
             </Form.Item>
 
@@ -177,43 +158,56 @@ const SuperAdminRegister = () => {
               <Col xs={24} sm={12}>
                 <Form.Item
                   name="dateOfBirth"
-                  label={<span style={{ color: '#0099cc', fontWeight: '500' }}>Ngày sinh</span>}
-                  rules={[
-                    { required: true, message: 'Vui lòng chọn ngày sinh' }
-                  ]}
+                  label={<span style={{ color: '#0099cc', fontWeight: '500' }}>📅 Ngày sinh</span>}
+                  rules={[{ required: true, message: 'Vui lòng chọn ngày sinh' }]}
                 >
-                  <DatePicker
-                    placeholder="Chọn ngày sinh"
-                    size="large"
-                    style={{ width: '100%', borderColor: '#a5f3fc', borderRadius: '8px' }}
+                  <input
+                    type="date"
                     disabled={loading}
-                    format="DD/MM/YYYY"
-                    disabledDate={(current) => {
-                      if (!current) return false;
-                      return current.isAfter(dayjs(), 'day');
+                    max={new Date().toISOString().split('T')[0]}
+                    style={{
+                      width: '100%',
+                      height: '40px',
+                      padding: '8px 12px',
+                      fontSize: '14px',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: '8px',
+                      outline: 'none',
+                      backgroundColor: loading ? '#f5f5f5' : '#fff',
+                      cursor: loading ? 'not-allowed' : 'pointer'
                     }}
-                    maxDate={dayjs()}
+                    onFocus={(e) => e.target.style.borderColor = '#0099cc'}
+                    onBlur={(e) => e.target.style.borderColor = '#d9d9d9'}
                   />
                 </Form.Item>
               </Col>
               <Col xs={24} sm={12}>
                 <Form.Item
                   name="gender"
-                  label={<span style={{ color: '#0099cc', fontWeight: '500' }}>Giới tính</span>}
-                  rules={[
-                    { required: true, message: 'Vui lòng chọn giới tính' }
-                  ]}
+                  label={<span style={{ color: '#0099cc', fontWeight: '500' }}>👤 Giới tính</span>}
+                  rules={[{ required: true, message: 'Vui lòng chọn giới tính' }]}
                 >
-                  <Select
-                    placeholder="Chọn giới tính"
-                    size="large"
+                  <select
                     disabled={loading}
-                    style={{ borderColor: '#a5f3fc' }}
+                    style={{
+                      width: '100%',
+                      height: '40px',
+                      padding: '8px 12px',
+                      fontSize: '14px',
+                      border: '1px solid #d9d9d9',
+                      borderRadius: '8px',
+                      outline: 'none',
+                      backgroundColor: loading ? '#f5f5f5' : '#fff',
+                      cursor: loading ? 'not-allowed' : 'pointer'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#0099cc'}
+                    onBlur={(e) => e.target.style.borderColor = '#d9d9d9'}
                   >
-                    <Select.Option value="MALE">Nam</Select.Option>
-                    <Select.Option value="FEMALE">Nữ</Select.Option>
-                    <Select.Option value="OTHER">Khác</Select.Option>
-                  </Select>
+                    <option value="">-- Chọn giới tính --</option>
+                    <option value="MALE"> Nam</option>
+                    <option value="FEMALE"> Nữ</option>
+                    <option value="OTHER">Khác</option>
+                  </select>
                 </Form.Item>
               </Col>
             </Row>
@@ -224,10 +218,7 @@ const SuperAdminRegister = () => {
               label={<span style={{ color: '#0099cc', fontWeight: '500' }}>Mật khẩu</span>}
               rules={[
                 { required: true, message: 'Vui lòng nhập mật khẩu' },
-                {
-                  min: 8,
-                  message: 'Mật khẩu phải có ít nhất 8 ký tự'
-                },
+                { min: 8, message: 'Mật khẩu phải có ít nhất 8 ký tự' },
                 {
                   pattern: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/,
                   message: 'Mật khẩu phải chứa chữ hoa, chữ thường, số và ký tự đặc biệt'
@@ -239,7 +230,6 @@ const SuperAdminRegister = () => {
                 placeholder="Ít nhất 8 ký tự (A, a, 0-9, @$!%*?&)"
                 size="large"
                 disabled={loading}
-                style={{ borderColor: '#a5f3fc', borderRadius: '8px' }}
               />
             </Form.Item>
 
@@ -254,9 +244,7 @@ const SuperAdminRegister = () => {
                     if (!value || getFieldValue('password') === value) {
                       return Promise.resolve();
                     }
-                    return Promise.reject(
-                      new Error('Mật khẩu xác nhận không khớp')
-                    );
+                    return Promise.reject(new Error('Mật khẩu xác nhận không khớp'));
                   }
                 })
               ]}
@@ -266,7 +254,6 @@ const SuperAdminRegister = () => {
                 placeholder="Nhập lại mật khẩu"
                 size="large"
                 disabled={loading}
-                style={{ borderColor: '#a5f3fc', borderRadius: '8px' }}
               />
             </Form.Item>
 
@@ -295,43 +282,15 @@ const SuperAdminRegister = () => {
           <Divider style={{ borderColor: '#e0f2fe', margin: '24px 0' }} />
 
           {/* Footer */}
-          <div style={{
-            textAlign: 'center',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px'
-          }}>
-            <p style={{
-              color: '#0077aa',
-              fontSize: '14px',
-              margin: 0
-            }}>
+          <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <p style={{ color: '#0077aa', fontSize: '14px', margin: 0 }}>
               Đã có tài khoản?{' '}
-              <Link
-                to="/superadmin/login"
-                style={{
-                  color: '#0099cc',
-                  fontWeight: '600',
-                  textDecoration: 'none'
-                }}
-              >
+              <Link to="/superadmin/login" style={{ color: '#0099cc', fontWeight: '600', textDecoration: 'none' }}>
                 Đăng nhập ngay
               </Link>
             </p>
-            <p style={{
-              color: '#64748b',
-              fontSize: '12px',
-              margin: 0
-            }}>
-              Quay lại <Link
-                to="/"
-                style={{
-                  color: '#0099cc',
-                  textDecoration: 'none'
-                }}
-              >
-                trang chủ
-              </Link>
+            <p style={{ color: '#64748b', fontSize: '12px', margin: 0 }}>
+              Quay lại <Link to="/" style={{ color: '#0099cc', textDecoration: 'none' }}>trang chủ</Link>
             </p>
           </div>
         </div>
