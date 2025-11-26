@@ -2,6 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, requirePermission, requireRole } = require('../middlewares/auth.middleware');
+const { requirePatientDataAccess } = require('../middlewares/rbac.middleware');
 const { ROLES, PERMISSIONS } = require('../constants/roles');
 const medicalController = require('../controllers/medical.controller');
 
@@ -12,6 +13,14 @@ router.get(
   '/',
   requirePermission(PERMISSIONS.VIEW_MEDICAL_RECORDS),
   medicalController.getRecords
+);
+
+// GET /api/medical/patient/:patientId - Hồ sơ y tế của bệnh nhân
+router.get(
+  '/patient/:patientId',
+  requirePermission(PERMISSIONS.VIEW_MEDICAL_RECORDS),
+  requirePatientDataAccess('patientId'),
+  medicalController.getByPatient
 );
 
 // GET /api/medical/:recordId - Chi tiết hồ sơ

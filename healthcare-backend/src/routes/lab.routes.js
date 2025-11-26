@@ -7,6 +7,13 @@ const labController = require('../controllers/lab.controller');
 
 router.use(authenticate);
 
+// GET /api/lab - Danh sách tất cả xét nghiệm (cho doctor)
+router.get(
+  '/',
+  requirePermission(PERMISSIONS.VIEW_LAB_RESULTS),
+  labController.getAll
+);
+
 // POST /api/lab - Tạo đơn xét nghiệm
 router.post(
   '/',

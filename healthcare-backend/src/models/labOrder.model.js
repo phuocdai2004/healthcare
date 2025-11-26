@@ -9,8 +9,7 @@ const labOrderSchema = new mongoose.Schema({
   },
   medicalRecordId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'MedicalRecord',
-    required: true
+    ref: 'MedicalRecord'
   },
   patientId: {
     type: mongoose.Schema.Types.ObjectId,

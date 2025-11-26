@@ -267,14 +267,20 @@ const UserManagement = () => {
 
   const handleSubmit = async (values) => {
     try {
-      // Convert dateOfBirth from dayjs to Date string (ISO format)
-      // Use UTC midnight to avoid timezone issues
+      // Convert dateOfBirth to ISO format
       let dateOfBirth;
       if (values.dateOfBirth) {
-        const dateStr = values.dateOfBirth.format('YYYY-MM-DD');
-        dateOfBirth = dayjs(`${dateStr}T00:00:00Z`).toISOString();
+        // Nếu là string từ input type="date" (YYYY-MM-DD)
+        if (typeof values.dateOfBirth === 'string') {
+          dateOfBirth = new Date(values.dateOfBirth + 'T00:00:00Z').toISOString();
+        } 
+        // Nếu là dayjs object
+        else if (values.dateOfBirth.format) {
+          const dateStr = values.dateOfBirth.format('YYYY-MM-DD');
+          dateOfBirth = new Date(dateStr + 'T00:00:00Z').toISOString();
+        }
       } else {
-        dateOfBirth = dayjs('1990-01-01T00:00:00Z').toISOString();
+        dateOfBirth = new Date('1990-01-01T00:00:00Z').toISOString();
       }
 
       const medicalRoles = ['DOCTOR', 'NURSE', 'PHARMACIST', 'LAB_TECHNICIAN'];
@@ -679,6 +685,7 @@ const UserManagement = () => {
         }}
         footer={null}
         width={600}
+        destroyOnClose
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item
@@ -720,11 +727,7 @@ const UserManagement = () => {
                 label="Ngày sinh"
                 rules={[{ required: true, message: 'Vui lòng chọn ngày sinh' }]}
               >
-                <DatePicker
-                  style={{ width: '100%' }}
-                  format="DD/MM/YYYY"
-                  disabledDate={(current) => current && current > dayjs().endOf('day')}
-                />
+                <Input type="date" style={{ width: '100%', height: '32px' }} />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -733,11 +736,22 @@ const UserManagement = () => {
                 label="Giới tính"
                 rules={[{ required: true, message: 'Vui lòng chọn giới tính' }]}
               >
-                <Select placeholder="Chọn giới tính">
-                  <Option value="MALE">Nam</Option>
-                  <Option value="FEMALE">Nữ</Option>
-                  <Option value="OTHER">Khác</Option>
-                </Select>
+                <select 
+                  style={{ 
+                    width: '100%', 
+                    height: '32px', 
+                    border: '1px solid #d9d9d9', 
+                    borderRadius: '6px',
+                    padding: '0 8px',
+                    fontSize: '14px'
+                  }}
+                  onChange={(e) => form.setFieldValue('gender', e.target.value)}
+                >
+                  <option value="">-- Chọn giới tính --</option>
+                  <option value="MALE">Nam</option>
+                  <option value="FEMALE">Nữ</option>
+                  <option value="OTHER">Khác</option>
+                </select>
               </Form.Item>
             </Col>
           </Row>
@@ -758,18 +772,31 @@ const UserManagement = () => {
             label="Vai trò"
             rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}
           >
-            <Select 
-              placeholder="Chọn vai trò"
-              onChange={(value) => setSelectedFormRole(value)}
+            <select 
+              style={{ 
+                width: '100%', 
+                height: '32px', 
+                border: '1px solid #d9d9d9', 
+                borderRadius: '6px',
+                padding: '0 8px',
+                fontSize: '14px'
+              }}
+              onChange={(e) => {
+                form.setFieldValue('role', e.target.value);
+                setSelectedFormRole(e.target.value);
+              }}
             >
-              <Option value="PATIENT">Bệnh nhân</Option>
-              <Option value="DOCTOR">Bác sĩ</Option>
-              <Option value="NURSE">Y tá</Option>
-              <Option value="PHARMACIST">Dược sĩ</Option>
-              <Option value="LAB_TECHNICIAN">Kỹ thuật viên phòng lab</Option>
-              <Option value="RECEPTIONIST">Lễ tân</Option>
-              <Option value="BILLING_STAFF">Nhân viên thanh toán</Option>
-            </Select>
+              <option value="">-- Chọn vai trò --</option>
+              <option value="SUPER_ADMIN">Super Admin</option>
+              <option value="ADMIN">Admin</option>
+              <option value="DOCTOR">Bác sĩ</option>
+              <option value="NURSE">Y tá</option>
+              <option value="PHARMACIST">Dược sĩ</option>
+              <option value="LAB_TECHNICIAN">Kỹ thuật viên phòng lab</option>
+              <option value="RECEPTIONIST">Lễ tân</option>
+              <option value="BILLING_STAFF">Nhân viên thanh toán</option>
+              <option value="PATIENT">Bệnh nhân</option>
+            </select>
           </Form.Item>
 
           {/* Medical Professional Fields */}
@@ -809,9 +836,7 @@ const UserManagement = () => {
             <Form.Item
               name="password"
               label="Mật khẩu"
-              rules={[
-                { validator: validatePassword }
-              ]}
+              rules={[{ validator: validatePassword }]}
             >
               <Input.Password 
                 prefix={<LockOutlined />} 

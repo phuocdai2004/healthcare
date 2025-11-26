@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   Card, Table, Button, Space, Modal, Form, Input, Select, message, Drawer,
-  Descriptions, Badge, Row, Col, InputNumber, DatePicker, Tag, Tabs
+  Descriptions, Badge, Row, Col, InputNumber, DatePicker, Tag, Tabs, Image, Spin
 } from 'antd';
 import {
-  PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, DollarOutlined, FileOutlined
+  PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, DollarOutlined, FileOutlined, QrcodeOutlined
 } from '@ant-design/icons';
 import { apiClient } from '../utils/api';
 import dayjs from 'dayjs';
@@ -15,6 +15,9 @@ const BillingManagement = () => {
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDetailDrawerVisible, setIsDetailDrawerVisible] = useState(false);
+  const [isQRModalVisible, setIsQRModalVisible] = useState(false);
+  const [qrData, setQrData] = useState(null);
+  const [qrLoading, setQrLoading] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [form] = Form.useForm();
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
@@ -99,6 +102,22 @@ const BillingManagement = () => {
   const handleViewRecord = (record) => {
     setSelectedRecord(record);
     setIsDetailDrawerVisible(true);
+  };
+
+  const handleGetQRCode = async (billId) => {
+    try {
+      setQrLoading(true);
+      const response = await apiClient.get(`/billing/${billId}/qr`);
+      if (response.data.success) {
+        setQrData(response.data.data);
+        setIsQRModalVisible(true);
+      }
+    } catch (err) {
+      console.error('Error getting QR code:', err);
+      message.error('Không thể lấy mã QR thanh toán');
+    } finally {
+      setQrLoading(false);
+    }
   };
 
   const handleSubmit = async (values) => {
@@ -200,7 +219,8 @@ const BillingManagement = () => {
       key: 'actions',
       render: (_, record) => (
         <Space>
-          <Button icon={<EyeOutlined />} onClick={() => handleViewRecord(record)} />
+          <Button icon={<EyeOutlined />} onClick={() => handleViewRecord(record)} title="Xem chi tiết" />
+          <Button icon={<QrcodeOutlined />} onClick={() => handleGetQRCode(record._id)} title="Mã QR thanh toán" />
           <Button icon={<EditOutlined />} onClick={() => handleEditRecord(record)} />
           <Button danger icon={<DeleteOutlined />} onClick={() => handleDeleteRecord(record._id)} />
         </Space>
@@ -385,6 +405,42 @@ const BillingManagement = () => {
           </Descriptions>
         )}
       </Drawer>
+
+      <Modal
+        title="Mã QR Thanh Toán"
+        open={isQRModalVisible}
+        onCancel={() => setIsQRModalVisible(false)}
+        width={500}
+        footer={null}
+      >
+        <Spin spinning={qrLoading}>
+          {qrData ? (
+            <div style={{ textAlign: 'center' }}>
+              <Image src={qrData.qrCode} alt="Payment QR" style={{ maxWidth: '280px' }} preview={false} />
+              <div style={{ marginTop: '20px', textAlign: 'left', fontSize: '13px' }}>
+                <p><strong>Mã:</strong> {qrData.paymentCode}</p>
+                <p><strong>Tiền:</strong> {qrData.amount?.toLocaleString('vi-VN')} đ</p>
+                <p><strong>Ngân hàng:</strong> {qrData.bankInfo?.bankCode}</p>
+                <p><strong>Tài khoản:</strong> {qrData.bankInfo?.accountNo}</p>
+                <p><strong>Chủ TK:</strong> {qrData.bankInfo?.accountName}</p>
+              </div>
+              <Button
+                type="primary"
+                block
+                style={{ marginTop: '15px' }}
+                onClick={() => {
+                  const link = document.createElement('a');
+                  link.href = qrData.qrCode;
+                  link.download = `qr-${qrData.paymentCode}.png`;
+                  link.click();
+                }}
+              >
+                Tải QR
+              </Button>
+            </div>
+          ) : null}
+        </Spin>
+      </Modal>
     </div>
   );
 };

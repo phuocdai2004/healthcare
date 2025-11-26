@@ -15,6 +15,19 @@ class LabController {
     }
   }
 
+  async getAll(req, res, next) {
+    try {
+      const { doctorId, page = 1, limit = 10 } = req.query;
+      const orders = await labService.getAll(doctorId || req.user._id, page, limit);
+      res.json({
+        success: true,
+        data: orders
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getById(req, res, next) {
     try {
       const order = await labService.getById(req.params.id);

@@ -2,17 +2,23 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Layout, Menu, Button, Card, Row, Col, Statistic, message, Spin, Avatar, Drawer,
-  Table, Tabs, Tag, Space, Modal, Form, Input, Select, Empty, Badge
+  Table, Tabs, Tag, Space, Modal, Form, Input, Select, Empty, Badge, Descriptions, Divider, List,
+  InputNumber, Typography, Timeline
 } from 'antd';
 import {
   LogoutOutlined, HomeOutlined, UserOutlined, CalendarOutlined, FileTextOutlined,
-  HeartOutlined, BellOutlined, SettingOutlined, PlusOutlined, EyeOutlined, CheckOutlined
+  HeartOutlined, BellOutlined, SettingOutlined, PlusOutlined, EyeOutlined, CheckOutlined,
+  MedicineBoxOutlined, ExperimentOutlined, FormOutlined, DeleteOutlined, EditOutlined,
+  PrinterOutlined, HistoryOutlined
 } from '@ant-design/icons';
 import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../utils/api';
 import dayjs from 'dayjs';
 
 const { Header, Sider, Content } = Layout;
+const { TextArea } = Input;
+const { Option } = Select;
+const { Title, Text } = Typography;
 
 const DoctorDashboard = () => {
   const { user, logout } = useAuth();
@@ -28,13 +34,33 @@ const DoctorDashboard = () => {
   });
   const [patients, setPatients] = useState([]);
   const [appointments, setAppointments] = useState([]);
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [labOrders, setLabOrders] = useState([]);
+  const [medicalRecords, setMedicalRecords] = useState([]);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 10, total: 0 });
   const [detailDrawerVisible, setDetailDrawerVisible] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  
+  // Modal states
+  const [consultationModalVisible, setConsultationModalVisible] = useState(false);
+  const [prescriptionModalVisible, setPrescriptionModalVisible] = useState(false);
+  const [labOrderModalVisible, setLabOrderModalVisible] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
+  
+  const [consultationForm] = Form.useForm();
+  const [prescriptionForm] = Form.useForm();
+  const [labOrderForm] = Form.useForm();
 
   useEffect(() => {
     fetchDashboardData();
   }, [selectedKey]);
+
+  // Also fetch patients list for prescription/lab modals
+  useEffect(() => {
+    if (patients.length === 0) {
+      fetchPatients();
+    }
+  }, []);
 
   const fetchDashboardData = async () => {
     try {
@@ -48,6 +74,14 @@ const DoctorDashboard = () => {
           break;
         case '3':
           await fetchAppointments();
+          break;
+        case '4':
+          await fetchPrescriptions();
+          await fetchPatients(); // Need patients for dropdown
+          break;
+        case '5':
+          await fetchLabOrders();
+          await fetchPatients(); // Need patients for dropdown
           break;
         default:
           break;
@@ -123,6 +157,194 @@ const DoctorDashboard = () => {
     } catch (err) {
       console.error('Error fetching appointments:', err);
       message.error('Không thể tải danh sách lịch hẹn');
+    }
+  };
+
+  // Fetch prescriptions
+  const fetchPrescriptions = async () => {
+    try {
+      const response = await apiClient.get('/prescriptions', {
+        params: {
+          doctorId: user._id,
+          page: pagination.current,
+          limit: pagination.pageSize
+        }
+      });
+      if (response.data.success) {
+        setPrescriptions(response.data.data.prescriptions || response.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching prescriptions:', err);
+    }
+  };
+
+  // Fetch lab orders
+  const fetchLabOrders = async () => {
+    try {
+      const response = await apiClient.get('/lab', {
+        params: {
+          doctorId: user._id,
+          page: pagination.current,
+          limit: pagination.pageSize
+        }
+      });
+      if (response.data.success) {
+        setLabOrders(response.data.data.orders || response.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching lab orders:', err);
+    }
+  };
+
+  // Fetch medical records
+  const fetchMedicalRecords = async (patientId) => {
+    try {
+      const response = await apiClient.get(`/medical/patient/${patientId}`);
+      if (response.data.success) {
+        setMedicalRecords(response.data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching medical records:', err);
+    }
+  };
+
+  // Start consultation
+  const handleStartConsultation = (appointment) => {
+    setSelectedAppointment(appointment);
+    consultationForm.resetFields();
+    setConsultationModalVisible(true);
+  };
+
+  // Submit consultation
+  const handleSubmitConsultation = async (values) => {
+    try {
+      setLoading(true);
+      const consultationData = {
+        patientId: selectedAppointment?.patientId?._id || selectedAppointment?.patientId,
+        appointmentId: selectedAppointment?._id,
+        chiefComplaint: values.chiefComplaint,
+        symptoms: values.symptoms?.split(',').map(s => s.trim()),
+        diagnosis: values.diagnosis,
+        notes: values.notes,
+        vitalSigns: {
+          bloodPressure: values.bloodPressure,
+          heartRate: values.heartRate,
+          temperature: values.temperature,
+          weight: values.weight,
+          height: values.height
+        }
+      };
+      
+      await apiClient.post('/consultation', consultationData);
+      message.success('Lưu thông tin khám bệnh thành công');
+      setConsultationModalVisible(false);
+      consultationForm.resetFields();
+      fetchAppointments();
+    } catch (err) {
+      console.error('Error saving consultation:', err);
+      message.error('Lỗi khi lưu thông tin khám bệnh');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Open prescription modal
+  const handleCreatePrescription = (appointment) => {
+    setSelectedAppointment(appointment);
+    prescriptionForm.resetFields();
+    setPrescriptionModalVisible(true);
+  };
+
+  // Submit prescription
+  const handleSubmitPrescription = async (values) => {
+    try {
+      setLoading(true);
+      
+      // Get patientId from appointment or from form
+      const patientId = selectedAppointment?.patientId?._id 
+        || selectedAppointment?.patientId 
+        || values.patientId;
+      
+      if (!patientId) {
+        message.error('Vui lòng chọn bệnh nhân');
+        setLoading(false);
+        return;
+      }
+      
+      const prescriptionData = {
+        patientId: patientId,
+        appointmentId: selectedAppointment?._id,
+        medications: [{
+          name: values.medicationName,
+          dosage: values.dosage,
+          frequency: values.frequency,
+          duration: values.duration,
+          quantity: values.quantity,
+          instructions: values.instructions
+        }],
+        notes: values.notes
+      };
+      
+      await apiClient.post('/prescriptions', prescriptionData);
+      message.success('Tạo đơn thuốc thành công');
+      setPrescriptionModalVisible(false);
+      prescriptionForm.resetFields();
+      fetchPrescriptions();
+    } catch (err) {
+      console.error('Error creating prescription:', err);
+      message.error('Lỗi khi tạo đơn thuốc');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Open lab order modal
+  const handleCreateLabOrder = (appointment) => {
+    setSelectedAppointment(appointment);
+    labOrderForm.resetFields();
+    setLabOrderModalVisible(true);
+  };
+
+  // Submit lab order
+  const handleSubmitLabOrder = async (values) => {
+    try {
+      setLoading(true);
+      
+      // Get patientId from appointment or from form
+      const patientId = selectedAppointment?.patientId?._id 
+        || selectedAppointment?.patientId 
+        || values.patientId;
+      
+      if (!patientId) {
+        message.error('Vui lòng chọn bệnh nhân');
+        setLoading(false);
+        return;
+      }
+      
+      const labOrderData = {
+        patientId: patientId,
+        appointmentId: selectedAppointment?._id,
+        tests: [{
+          testName: values.testName,
+          testCode: values.testCode,
+          category: values.category,
+          priority: values.priority,
+          instructions: values.testInstructions
+        }],
+        clinicalNotes: values.clinicalNotes,
+        priority: values.priority || 'NORMAL'
+      };
+      
+      await apiClient.post('/lab', labOrderData);
+      message.success('Tạo yêu cầu xét nghiệm thành công');
+      setLabOrderModalVisible(false);
+      labOrderForm.resetFields();
+      fetchLabOrders();
+    } catch (err) {
+      console.error('Error creating lab order:', err);
+      message.error('Lỗi khi tạo yêu cầu xét nghiệm');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -223,10 +445,49 @@ const DoctorDashboard = () => {
     {
       title: 'Hành động',
       key: 'actions',
+      width: 280,
       render: (_, record) => (
-        <Space>
-          <Button icon={<CheckOutlined />} onClick={() => markCompleted(record._id)} />
-          <Button danger onClick={() => cancelAppointment(record._id)} />
+        <Space wrap>
+          <Button 
+            type="primary" 
+            size="small"
+            icon={<FormOutlined />} 
+            onClick={() => handleStartConsultation(record)}
+            title="Khám bệnh"
+          >
+            Khám
+          </Button>
+          <Button 
+            size="small"
+            icon={<MedicineBoxOutlined />} 
+            onClick={() => handleCreatePrescription(record)}
+            title="Kê đơn thuốc"
+            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', color: 'white' }}
+          >
+            Đơn thuốc
+          </Button>
+          <Button 
+            size="small"
+            icon={<ExperimentOutlined />} 
+            onClick={() => handleCreateLabOrder(record)}
+            title="Yêu cầu xét nghiệm"
+            style={{ backgroundColor: '#722ed1', borderColor: '#722ed1', color: 'white' }}
+          >
+            Xét nghiệm
+          </Button>
+          <Button 
+            size="small"
+            icon={<CheckOutlined />} 
+            onClick={() => markCompleted(record._id)} 
+            title="Hoàn tất"
+          />
+          <Button 
+            danger 
+            size="small"
+            icon={<DeleteOutlined />}
+            onClick={() => cancelAppointment(record._id)} 
+            title="Hủy"
+          />
         </Space>
       )
     }
@@ -272,7 +533,112 @@ const DoctorDashboard = () => {
     { key: '1', icon: <HomeOutlined />, label: 'Tổng Quan' },
     { key: '2', icon: <UserOutlined />, label: 'Bệnh Nhân' },
     { key: '3', icon: <CalendarOutlined />, label: 'Lịch Hẹn' },
-    { key: '4', icon: <FileTextOutlined />, label: 'Hồ Sơ Y Tế' }
+    { key: '4', icon: <MedicineBoxOutlined />, label: 'Đơn Thuốc' },
+    { key: '5', icon: <ExperimentOutlined />, label: 'Xét Nghiệm' },
+    { key: '6', icon: <FileTextOutlined />, label: 'Hồ Sơ Y Tế' }
+  ];
+
+  // Prescription columns
+  const prescriptionColumns = [
+    {
+      title: 'Mã đơn',
+      dataIndex: 'prescriptionId',
+      key: 'prescriptionId'
+    },
+    {
+      title: 'Bệnh nhân',
+      key: 'patient',
+      render: (_, record) => record.patientId?.patientId || record.patientId
+    },
+    {
+      title: 'Ngày kê',
+      dataIndex: 'createdAt',
+      key: 'date',
+      render: (date) => dayjs(date).format('DD/MM/YYYY')
+    },
+    {
+      title: 'Thuốc',
+      dataIndex: 'medications',
+      key: 'medications',
+      render: (meds) => meds?.map(m => m.name).join(', ') || '-'
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => {
+        const colors = {
+          'PENDING': 'orange',
+          'DISPENSED': 'green',
+          'CANCELLED': 'red'
+        };
+        const labels = {
+          'PENDING': 'Chờ cấp',
+          'DISPENSED': 'Đã cấp',
+          'CANCELLED': 'Đã hủy'
+        };
+        return <Tag color={colors[status]}>{labels[status] || status}</Tag>;
+      }
+    }
+  ];
+
+  // Lab order columns
+  const labOrderColumns = [
+    {
+      title: 'Mã xét nghiệm',
+      dataIndex: 'orderId',
+      key: 'orderId'
+    },
+    {
+      title: 'Bệnh nhân',
+      key: 'patient',
+      render: (_, record) => record.patientId?.patientId || record.patientId
+    },
+    {
+      title: 'Ngày yêu cầu',
+      dataIndex: 'createdAt',
+      key: 'date',
+      render: (date) => dayjs(date).format('DD/MM/YYYY')
+    },
+    {
+      title: 'Xét nghiệm',
+      dataIndex: 'tests',
+      key: 'tests',
+      render: (tests) => tests?.map(t => t.testName).join(', ') || '-'
+    },
+    {
+      title: 'Độ ưu tiên',
+      dataIndex: 'priority',
+      key: 'priority',
+      render: (priority) => {
+        const colors = {
+          'NORMAL': 'blue',
+          'URGENT': 'orange',
+          'STAT': 'red'
+        };
+        return <Tag color={colors[priority]}>{priority}</Tag>;
+      }
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => {
+        const colors = {
+          'PENDING': 'orange',
+          'IN_PROGRESS': 'blue',
+          'COMPLETED': 'green',
+          'CANCELLED': 'red'
+        };
+        const labels = {
+          'PENDING': 'Chờ xử lý',
+          'IN_PROGRESS': 'Đang thực hiện',
+          'COMPLETED': 'Hoàn tất',
+          'CANCELLED': 'Đã hủy'
+        };
+        return <Tag color={colors[status]}>{labels[status] || status}</Tag>;
+      }
+    }
   ];
 
   const renderContent = () => {
@@ -362,6 +728,82 @@ const DoctorDashboard = () => {
             />
           </Card>
         );
+      case '4':
+        return (
+          <Card 
+            title="Danh Sách Đơn Thuốc"
+            extra={
+              <Button 
+                type="primary" 
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  setSelectedAppointment(null);
+                  prescriptionForm.resetFields();
+                  setPrescriptionModalVisible(true);
+                }}
+              >
+                Tạo Đơn Thuốc
+              </Button>
+            }
+          >
+            <Table
+              columns={prescriptionColumns}
+              dataSource={prescriptions}
+              loading={loading}
+              pagination={{
+                current: pagination.current,
+                pageSize: pagination.pageSize,
+                total: pagination.total,
+                onChange: (page, pageSize) => {
+                  setPagination({ current: page, pageSize, total: pagination.total });
+                  fetchPrescriptions();
+                }
+              }}
+              rowKey="_id"
+            />
+          </Card>
+        );
+      case '5':
+        return (
+          <Card 
+            title="Danh Sách Xét Nghiệm"
+            extra={
+              <Button 
+                type="primary" 
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  setSelectedAppointment(null);
+                  labOrderForm.resetFields();
+                  setLabOrderModalVisible(true);
+                }}
+              >
+                Tạo Yêu Cầu Xét Nghiệm
+              </Button>
+            }
+          >
+            <Table
+              columns={labOrderColumns}
+              dataSource={labOrders}
+              loading={loading}
+              pagination={{
+                current: pagination.current,
+                pageSize: pagination.pageSize,
+                total: pagination.total,
+                onChange: (page, pageSize) => {
+                  setPagination({ current: page, pageSize, total: pagination.total });
+                  fetchLabOrders();
+                }
+              }}
+              rowKey="_id"
+            />
+          </Card>
+        );
+      case '6':
+        return (
+          <Card title="Hồ Sơ Y Tế">
+            <Empty description="Chọn bệnh nhân từ danh sách để xem hồ sơ y tế" />
+          </Card>
+        );
       default:
         return <Empty description="Chọn một mục từ menu" />;
     }
@@ -412,6 +854,7 @@ const DoctorDashboard = () => {
         </Content>
       </Layout>
 
+      {/* Patient Detail Drawer */}
       <Drawer
         title="Chi Tiết Bệnh Nhân"
         onClose={() => setDetailDrawerVisible(false)}
@@ -449,6 +892,409 @@ const DoctorDashboard = () => {
           </div>
         )}
       </Drawer>
+
+      {/* Consultation Modal */}
+      <Modal
+        title="Khám Bệnh"
+        open={consultationModalVisible}
+        onCancel={() => setConsultationModalVisible(false)}
+        footer={null}
+        width={700}
+      >
+        <Form
+          form={consultationForm}
+          layout="vertical"
+          onFinish={handleSubmitConsultation}
+        >
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item
+                name="chiefComplaint"
+                label="Lý do khám"
+                rules={[{ required: true, message: 'Vui lòng nhập lý do khám' }]}
+              >
+                <TextArea rows={2} placeholder="Nhập lý do khám bệnh" />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Divider>Chỉ Số Sinh Tồn</Divider>
+          
+          <Row gutter={16}>
+            <Col span={8}>
+              <Form.Item name="bloodPressure" label="Huyết áp (mmHg)">
+                <Input placeholder="120/80" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="heartRate" label="Nhịp tim (bpm)">
+                <InputNumber min={40} max={200} style={{ width: '100%' }} placeholder="72" />
+              </Form.Item>
+            </Col>
+            <Col span={8}>
+              <Form.Item name="temperature" label="Nhiệt độ (°C)">
+                <InputNumber min={35} max={42} step={0.1} style={{ width: '100%' }} placeholder="37" />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="weight" label="Cân nặng (kg)">
+                <InputNumber min={1} max={300} style={{ width: '100%' }} placeholder="60" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="height" label="Chiều cao (cm)">
+                <InputNumber min={50} max={250} style={{ width: '100%' }} placeholder="170" />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Divider>Triệu Chứng & Chẩn Đoán</Divider>
+          
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item
+                name="symptoms"
+                label="Triệu chứng (cách nhau bởi dấu phẩy)"
+              >
+                <TextArea rows={2} placeholder="Sốt, ho, đau đầu, mệt mỏi..." />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item
+                name="diagnosis"
+                label="Chẩn đoán"
+                rules={[{ required: true, message: 'Vui lòng nhập chẩn đoán' }]}
+              >
+                <TextArea rows={2} placeholder="Nhập chẩn đoán bệnh" />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="notes" label="Ghi chú">
+                <TextArea rows={3} placeholder="Ghi chú thêm..." />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit" loading={loading}>
+                Lưu Thông Tin
+              </Button>
+              <Button onClick={() => setConsultationModalVisible(false)}>
+                Hủy
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Prescription Modal */}
+      <Modal
+        title="Kê Đơn Thuốc"
+        open={prescriptionModalVisible}
+        onCancel={() => setPrescriptionModalVisible(false)}
+        footer={null}
+        width={700}
+      >
+        <Form
+          form={prescriptionForm}
+          layout="vertical"
+          onFinish={handleSubmitPrescription}
+        >
+          {/* Show patient selector if no appointment selected */}
+          {!selectedAppointment && (
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item
+                  name="patientId"
+                  label="Chọn bệnh nhân"
+                  rules={[{ required: true, message: 'Vui lòng chọn bệnh nhân' }]}
+                >
+                  <select
+                    style={{
+                      width: '100%',
+                      height: '40px',
+                      borderRadius: '6px',
+                      border: '1px solid #d9d9d9',
+                      padding: '4px 11px',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                    onChange={(e) => prescriptionForm.setFieldsValue({ patientId: e.target.value })}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>-- Chọn bệnh nhân --</option>
+                    {patients.map(p => (
+                      <option key={p._id} value={p._id}>
+                        {p.patientId} - {p.personalInfo?.firstName} {p.personalInfo?.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
+          
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="medicationName"
+                label="Tên thuốc"
+                rules={[{ required: true, message: 'Vui lòng nhập tên thuốc' }]}
+              >
+                <Input placeholder="Paracetamol 500mg" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="dosage"
+                label="Liều lượng"
+                rules={[{ required: true, message: 'Vui lòng nhập liều lượng' }]}
+              >
+                <Input placeholder="1 viên" />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="frequency"
+                label="Tần suất"
+                rules={[{ required: true, message: 'Vui lòng chọn tần suất' }]}
+              >
+                <select
+                  style={{
+                    width: '100%',
+                    height: '32px',
+                    borderRadius: '6px',
+                    border: '1px solid #d9d9d9',
+                    padding: '4px 11px',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                  onChange={(e) => prescriptionForm.setFieldsValue({ frequency: e.target.value })}
+                  defaultValue=""
+                >
+                  <option value="" disabled>Chọn tần suất</option>
+                  <option value="1 lần/ngày">1 lần/ngày</option>
+                  <option value="2 lần/ngày">2 lần/ngày</option>
+                  <option value="3 lần/ngày">3 lần/ngày</option>
+                  <option value="4 lần/ngày">4 lần/ngày</option>
+                  <option value="Khi cần">Khi cần</option>
+                </select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="duration"
+                label="Thời gian dùng"
+                rules={[{ required: true, message: 'Vui lòng nhập thời gian' }]}
+              >
+                <Input placeholder="7 ngày" />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="quantity"
+                label="Số lượng"
+                rules={[{ required: true, message: 'Vui lòng nhập số lượng' }]}
+              >
+                <InputNumber min={1} style={{ width: '100%' }} placeholder="20" />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="instructions" label="Hướng dẫn sử dụng">
+                <TextArea rows={2} placeholder="Uống sau ăn, tránh đồ cay nóng..." />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="notes" label="Ghi chú">
+                <TextArea rows={2} placeholder="Ghi chú thêm..." />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit" loading={loading}>
+                Tạo Đơn Thuốc
+              </Button>
+              <Button onClick={() => setPrescriptionModalVisible(false)}>
+                Hủy
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Lab Order Modal */}
+      <Modal
+        title="Yêu Cầu Xét Nghiệm"
+        open={labOrderModalVisible}
+        onCancel={() => setLabOrderModalVisible(false)}
+        footer={null}
+        width={600}
+      >
+        <Form
+          form={labOrderForm}
+          layout="vertical"
+          onFinish={handleSubmitLabOrder}
+        >
+          {/* Show patient selector if no appointment selected */}
+          {!selectedAppointment && (
+            <Row gutter={16}>
+              <Col span={24}>
+                <Form.Item
+                  name="patientId"
+                  label="Chọn bệnh nhân"
+                  rules={[{ required: true, message: 'Vui lòng chọn bệnh nhân' }]}
+                >
+                  <select
+                    style={{
+                      width: '100%',
+                      height: '40px',
+                      borderRadius: '6px',
+                      border: '1px solid #d9d9d9',
+                      padding: '4px 11px',
+                      fontSize: '14px',
+                      cursor: 'pointer'
+                    }}
+                    onChange={(e) => labOrderForm.setFieldsValue({ patientId: e.target.value })}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>-- Chọn bệnh nhân --</option>
+                    {patients.map(p => (
+                      <option key={p._id} value={p._id}>
+                        {p.patientId} - {p.personalInfo?.firstName} {p.personalInfo?.lastName}
+                      </option>
+                    ))}
+                  </select>
+                </Form.Item>
+              </Col>
+            </Row>
+          )}
+          
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="testName"
+                label="Tên xét nghiệm"
+                rules={[{ required: true, message: 'Vui lòng nhập tên xét nghiệm' }]}
+              >
+                <Input placeholder="Xét nghiệm máu tổng quát" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="testCode" label="Mã xét nghiệm">
+                <Input placeholder="CBC001" />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="category"
+                label="Loại xét nghiệm"
+                rules={[{ required: true, message: 'Vui lòng chọn loại xét nghiệm' }]}
+              >
+                <select
+                  style={{
+                    width: '100%',
+                    height: '32px',
+                    borderRadius: '6px',
+                    border: '1px solid #d9d9d9',
+                    padding: '4px 11px',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                  onChange={(e) => labOrderForm.setFieldsValue({ category: e.target.value })}
+                  defaultValue=""
+                >
+                  <option value="" disabled>Chọn loại</option>
+                  <option value="HEMATOLOGY">Huyết học</option>
+                  <option value="BIOCHEMISTRY">Sinh hóa</option>
+                  <option value="MICROBIOLOGY">Vi sinh</option>
+                  <option value="IMAGING">Hình ảnh</option>
+                  <option value="URINE">Nước tiểu</option>
+                  <option value="OTHER">Khác</option>
+                </select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="priority"
+                label="Độ ưu tiên"
+                initialValue="NORMAL"
+              >
+                <select
+                  style={{
+                    width: '100%',
+                    height: '32px',
+                    borderRadius: '6px',
+                    border: '1px solid #d9d9d9',
+                    padding: '4px 11px',
+                    fontSize: '14px',
+                    cursor: 'pointer'
+                  }}
+                  onChange={(e) => labOrderForm.setFieldsValue({ priority: e.target.value })}
+                  defaultValue="NORMAL"
+                >
+                  <option value="NORMAL">Bình thường</option>
+                  <option value="URGENT">Khẩn cấp</option>
+                  <option value="STAT">Ngay lập tức</option>
+                </select>
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="testInstructions" label="Hướng dẫn chuẩn bị">
+                <TextArea rows={2} placeholder="Nhịn ăn 8 tiếng trước khi xét nghiệm..." />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="clinicalNotes" label="Ghi chú lâm sàng">
+                <TextArea rows={2} placeholder="Bệnh nhân có triệu chứng sốt kéo dài..." />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit" loading={loading}>
+                Tạo Yêu Cầu
+              </Button>
+              <Button onClick={() => setLabOrderModalVisible(false)}>
+                Hủy
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </Layout>
   );
 };

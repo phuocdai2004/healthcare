@@ -15,6 +15,19 @@ class PrescriptionController {
     }
   }
 
+  async getAll(req, res, next) {
+    try {
+      const { doctorId, page = 1, limit = 10 } = req.query;
+      const prescriptions = await prescriptionService.getAll(doctorId || req.user._id, page, limit);
+      res.json({
+        success: true,
+        data: prescriptions
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async getByPatient(req, res, next) {
     try {
       const prescriptions = await prescriptionService.getByPatient(req.params.patientId);

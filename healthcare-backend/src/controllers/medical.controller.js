@@ -40,6 +40,18 @@ class MedicalController {
     }
   }
 
+  async getByPatient(req, res, next) {
+    try {
+      const records = await medicalService.getRecords({ patientId: req.params.patientId });
+      res.json({
+        success: true,
+        data: records
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async update(req, res, next) {
     try {
       const record = await medicalService.updateRecord(req.params.recordId, req.body);

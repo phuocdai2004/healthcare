@@ -426,6 +426,7 @@ const PatientManagement = () => {
           pagination={pagination}
           onChange={handleTableChange}
           scroll={{ x: 1200 }}
+          rowKey="_id"
         />
       </Card>
 

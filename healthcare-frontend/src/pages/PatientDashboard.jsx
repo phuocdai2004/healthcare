@@ -40,19 +40,19 @@ const PatientDashboard = () => {
       // Fetch all data in parallel
       const [demoRes, recordsRes, aptsRes, rxRes, billsRes] = await Promise.allSettled([
         apiClient.get(`/patients/${user._id}/demographics`),
-        apiClient.get(`/patients/${user._id}/medical-records`),
-        apiClient.get(`/patients/${user._id}/appointments`),
-        apiClient.get(`/patients/${user._id}/prescriptions`),
-        apiClient.get(`/bills?patientId=${user._id}`)
+        apiClient.get(`/medical/patient/${user._id}`),
+        apiClient.get(`/appointments/patient/${user._id}`),
+        apiClient.get(`/prescriptions/patient/${user._id}`),
+        apiClient.get(`/billing/patient/${user._id}`)
       ]);
 
       // Process results safely
       const newData = {
         patient: demoRes.status === 'fulfilled' ? demoRes.value.data.data : null,
-        records: recordsRes.status === 'fulfilled' ? recordsRes.value.data.data?.records || [] : [],
-        appointments: aptsRes.status === 'fulfilled' ? aptsRes.value.data.data?.appointments || [] : [],
-        prescriptions: rxRes.status === 'fulfilled' ? rxRes.value.data.data?.prescriptions || [] : [],
-        bills: billsRes.status === 'fulfilled' ? billsRes.value.data.data?.bills || [] : []
+        records: recordsRes.status === 'fulfilled' ? Array.isArray(recordsRes.value.data.data) ? recordsRes.value.data.data : [] : [],
+        appointments: aptsRes.status === 'fulfilled' ? Array.isArray(aptsRes.value.data.data) ? aptsRes.value.data.data : [] : [],
+        prescriptions: rxRes.status === 'fulfilled' ? Array.isArray(rxRes.value.data.data) ? rxRes.value.data.data : [] : [],
+        bills: billsRes.status === 'fulfilled' ? Array.isArray(billsRes.value.data.data) ? billsRes.value.data.data : [] : []
       };
 
       setData(newData);

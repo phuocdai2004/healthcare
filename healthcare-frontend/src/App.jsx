@@ -54,8 +54,8 @@ const theme = {
       colorPrimaryBorder: '#e0f2fe',
     },
     Layout: {
-      colorBgHeader: '#ffffff',
-      colorBgBody: '#f8fdfb',
+      headerBg: '#ffffff',
+      bodyBg: '#f8fdfb',
     },
   },
 };

@@ -7,6 +7,13 @@ const prescriptionController = require('../controllers/prescription.controller')
 
 router.use(authenticate);
 
+// GET /api/prescriptions - Danh sách tất cả đơn thuốc (cho doctor)
+router.get(
+  '/',
+  requirePermission(PERMISSIONS.VIEW_PRESCRIPTIONS),
+  prescriptionController.getAll
+);
+
 // POST /api/prescriptions - Tạo đơn thuốc
 router.post(
   '/',
