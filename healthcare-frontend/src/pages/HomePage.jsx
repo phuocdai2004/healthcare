@@ -153,7 +153,7 @@ const HomePage = () => {
       name: 'Dr. Nguyễn Văn A',
       role: 'Bác Sĩ Tim Mạch',
       hospital: 'Bệnh Viện Đại Học Y Hà Nội',
-      image: '👨‍⚕️',
+      image: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&h=150&fit=crop&crop=face',
       content: 'Hệ thống giúp tôi tiết kiệm 3 giờ/ngày, có thể tập trung vào bệnh nhân hơn.',
       rating: 5
     },
@@ -161,7 +161,7 @@ const HomePage = () => {
       name: 'Ms. Trần Thị B',
       role: 'Quản Lý Bệnh Viện',
       hospital: 'Bệnh Viện Chợ Rẫy',
-      image: '👩‍💼',
+      image: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?w=150&h=150&fit=crop&crop=face',
       content: 'Hiệu suất tăng 40%, bệnh nhân rất hài lòng với quy trình nhanh hơn.',
       rating: 5
     },
@@ -169,7 +169,7 @@ const HomePage = () => {
       name: 'Mr. Lê Văn C',
       role: 'Giám Đốc IT',
       hospital: 'Bệnh Viện 108',
-      image: '👨‍💻',
+      image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
       content: 'Triển khai dễ dàng, support team rất chuyên nghiệp. Strongly recommend!',
       rating: 5
     }
@@ -213,28 +213,28 @@ const HomePage = () => {
       name: 'Dr. Võ Văn Luận',
       role: 'CEO & Founder',
       expertise: 'Healthcare Architecture',
-      image: '👨‍💼',
+      image: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=200&h=200&fit=crop&crop=face',
       bio: '15+ năm kinh nghiệm trong IT Healthcare'
     },
     {
       name: 'Nguyễn Phước Đại',
       role: 'CTO',
       expertise: 'Full-stack Development',
-      image: '👨‍💻',
+      image: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=200&h=200&fit=crop&crop=face',
       bio: '10+ năm phát triển các hệ thống lớn'
     },
     {
       name: 'Dr. Trần Thị Hương',
       role: 'Medical Advisor',
       expertise: 'Healthcare Compliance',
-      image: '👩‍⚕️',
+      image: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=200&h=200&fit=crop&crop=face',
       bio: 'Bác sĩ chuyên khoa với 20+ năm kinh nghiệm'
     },
     {
       name: 'Lê Văn Minh',
       role: 'Head of Support',
       expertise: 'Customer Success',
-      image: '👨‍🎓',
+      image: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=200&h=200&fit=crop&crop=face',
       bio: 'Hỗ trợ khách hàng 24/7 chuyên nghiệp'
     }
   ];
@@ -270,21 +270,21 @@ const HomePage = () => {
       category: 'Tips',
       title: 'Cách tối ưu hóa quy trình quản lý bệnh nhân',
       excerpt: 'Khám phá những cách tốt nhất để tăng hiệu suất công việc...',
-      image: '📊'
+      image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1f?w=400&h=250&fit=crop'
     },
     {
       date: '20/11/2025',
       category: 'Security',
       title: 'Bảo mật dữ liệu y tế - những điều cần biết',
       excerpt: 'Hiểu rõ hơn về cách chúng tôi bảo vệ dữ liệu của bạn...',
-      image: '🔒'
+      image: 'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=400&h=250&fit=crop'
     },
     {
       date: '15/11/2025',
       category: 'Case Study',
       title: 'Bệnh viện X tăng hiệu suất 40% với Healthcare System',
       excerpt: 'Tìm hiểu câu chuyện thành công của một bệnh viện lớn...',
-      image: '🏥'
+      image: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=400&h=250&fit=crop'
     }
   ];
 
@@ -399,33 +399,38 @@ const HomePage = () => {
       {/* ===== HERO SECTION - PREMIUM ===== */}
       <div
         style={{
-          background: 'linear-gradient(135deg, #0099cc 0%, #0077aa 50%, #005a8b 100%)',
-          padding: '100px 40px',
+          background: `linear-gradient(135deg, rgba(0, 153, 204, 0.95) 0%, rgba(0, 119, 170, 0.95) 50%, rgba(0, 90, 139, 0.95) 100%), url('https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?w=1920&q=80')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          padding: '120px 40px',
           textAlign: 'center',
           color: '#ffffff',
           position: 'relative',
           overflow: 'hidden'
         }}
       >
-        <div style={{ position: 'absolute', opacity: 0.1, fontSize: '300px', top: '-50px', right: '-100px', animation: 'float 8s ease-in-out infinite' }}>
-          🏥
-        </div>
+        {/* Floating elements */}
+        <div style={{ position: 'absolute', opacity: 0.15, fontSize: '200px', top: '10%', left: '5%', animation: 'float 6s ease-in-out infinite' }}>💊</div>
+        <div style={{ position: 'absolute', opacity: 0.1, fontSize: '150px', bottom: '10%', right: '10%', animation: 'float 8s ease-in-out infinite 1s' }}>🩺</div>
+        <div style={{ position: 'absolute', opacity: 0.1, fontSize: '120px', top: '20%', right: '15%', animation: 'float 7s ease-in-out infinite 0.5s' }}>❤️</div>
+        
         <h1 style={{ 
-          fontSize: '56px', 
+          fontSize: '60px', 
           fontWeight: '900', 
-          marginBottom: '20px',
-          lineHeight: '1.2',
-          animation: 'fadeInUp 0.8s ease-out'
+          marginBottom: '24px',
+          lineHeight: '1.15',
+          animation: 'fadeInUp 0.8s ease-out',
+          textShadow: '0 4px 20px rgba(0,0,0,0.3)'
         }}>
-          Hệ Thống Quản Lý Y Tế <br /> <span style={{ color: '#e0f2fe' }}>Tích Hợp & Hiện Đại</span>
+          Hệ Thống Quản Lý Y Tế <br /> <span style={{ color: '#a5f3fc' }}>Tích Hợp & Hiện Đại</span>
         </h1>
         <p style={{ 
           fontSize: '22px', 
-          color: '#a5f3fc',
+          color: '#e0f7fa',
           marginBottom: '50px',
-          maxWidth: '700px',
+          maxWidth: '750px',
           margin: '0 auto 50px',
-          lineHeight: '1.6',
+          lineHeight: '1.7',
           animation: 'fadeInUp 0.8s ease-out 0.2s both'
         }}>
           Tự động hóa quy trình y tế, tăng hiệu suất lên 40%, giảm lỗi 60%, nâng cao trải nghiệm bệnh nhân
@@ -770,9 +775,18 @@ const HomePage = () => {
                 </p>
                 <div style={{ borderTop: '1px solid #e0f2fe', paddingTop: '16px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', marginBottom: '8px' }}>
-                    <div style={{ fontSize: '40px', marginRight: '12px' }}>
-                      {testimonial.image}
-                    </div>
+                    <img 
+                      src={testimonial.image} 
+                      alt={testimonial.name}
+                      style={{ 
+                        width: '50px', 
+                        height: '50px', 
+                        borderRadius: '50%', 
+                        marginRight: '12px',
+                        objectFit: 'cover',
+                        border: '2px solid #0099cc'
+                      }}
+                    />
                     <div>
                       <p style={{ 
                         fontSize: '14px', 
@@ -795,6 +809,132 @@ const HomePage = () => {
                     {testimonial.hospital}
                   </p>
                 </div>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </div>
+
+      {/* ===== TEAM SECTION ===== */}
+      <div style={{ padding: '80px 40px', background: '#f8fafc' }}>
+        <h2 style={{ 
+          fontSize: '44px', 
+          fontWeight: '800', 
+          color: '#0077aa',
+          textAlign: 'center',
+          marginBottom: '20px'
+        }}>
+          👥 Đội Ngũ Của Chúng Tôi
+        </h2>
+        <p style={{ textAlign: 'center', color: '#64748b', fontSize: '18px', marginBottom: '50px', maxWidth: '600px', margin: '0 auto 50px' }}>
+          Những chuyên gia hàng đầu trong lĩnh vực công nghệ y tế
+        </p>
+        <Row gutter={[32, 32]} justify="center">
+          {teamMembers.map((member, idx) => (
+            <Col xs={24} sm={12} md={6} key={idx}>
+              <Card 
+                hoverable
+                style={{
+                  borderRadius: '16px',
+                  textAlign: 'center',
+                  border: 'none',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                  overflow: 'hidden'
+                }}
+              >
+                <img 
+                  src={member.image} 
+                  alt={member.name}
+                  style={{ 
+                    width: '120px', 
+                    height: '120px', 
+                    borderRadius: '50%', 
+                    objectFit: 'cover',
+                    border: '4px solid #0099cc',
+                    marginBottom: '16px'
+                  }}
+                />
+                <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#0077aa', marginBottom: '4px' }}>
+                  {member.name}
+                </h3>
+                <p style={{ fontSize: '14px', color: '#0099cc', fontWeight: '600', marginBottom: '8px' }}>
+                  {member.role}
+                </p>
+                <p style={{ fontSize: '12px', color: '#64748b', marginBottom: '8px' }}>
+                  {member.expertise}
+                </p>
+                <p style={{ fontSize: '13px', color: '#94a3b8', fontStyle: 'italic' }}>
+                  {member.bio}
+                </p>
+              </Card>
+            </Col>
+          ))}
+        </Row>
+      </div>
+
+      {/* ===== BLOG SECTION ===== */}
+      <div style={{ padding: '80px 40px', background: '#ffffff' }}>
+        <h2 style={{ 
+          fontSize: '44px', 
+          fontWeight: '800', 
+          color: '#0077aa',
+          textAlign: 'center',
+          marginBottom: '20px'
+        }}>
+          📰 Tin Tức & Bài Viết
+        </h2>
+        <p style={{ textAlign: 'center', color: '#64748b', fontSize: '18px', marginBottom: '50px', maxWidth: '600px', margin: '0 auto 50px' }}>
+          Cập nhật những xu hướng mới nhất trong công nghệ y tế
+        </p>
+        <Row gutter={[32, 32]}>
+          {blogPosts.map((post, idx) => (
+            <Col xs={24} md={8} key={idx}>
+              <Card 
+                hoverable
+                style={{
+                  borderRadius: '16px',
+                  overflow: 'hidden',
+                  border: 'none',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
+                }}
+                cover={
+                  <div style={{ position: 'relative', overflow: 'hidden' }}>
+                    <img 
+                      src={post.image} 
+                      alt={post.title}
+                      style={{ 
+                        width: '100%', 
+                        height: '200px', 
+                        objectFit: 'cover',
+                        transition: 'transform 0.3s ease'
+                      }}
+                    />
+                    <div style={{
+                      position: 'absolute',
+                      top: '12px',
+                      left: '12px',
+                      background: '#0099cc',
+                      color: '#fff',
+                      padding: '4px 12px',
+                      borderRadius: '20px',
+                      fontSize: '12px',
+                      fontWeight: '600'
+                    }}>
+                      {post.category}
+                    </div>
+                  </div>
+                }
+              >
+                <p style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '8px' }}>{post.date}</p>
+                <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', marginBottom: '12px', lineHeight: '1.4' }}>
+                  {post.title}
+                </h3>
+                <p style={{ fontSize: '14px', color: '#64748b', lineHeight: '1.6' }}>
+                  {post.excerpt}
+                </p>
+                <Button type="link" style={{ padding: 0, color: '#0099cc', fontWeight: '600' }}>
+                  Đọc thêm →
+                </Button>
               </Card>
             </Col>
           ))}
