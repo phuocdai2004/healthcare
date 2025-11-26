@@ -46,9 +46,9 @@ services:
       - key: SUPER_ADMIN_NAME
         value: System Administrator
       
-      # CORS - Will be set to frontend URL
+      # CORS - Multiple origins (localhost + production)
       - key: CORS_ORIGIN
-        sync: false
+        value: "https://healthcare-website-rr69.onrender.com,http://localhost:5173,http://localhost:3000"
       
       # Email SMTP (set manually)
       - key: EMAIL_FROM

@@ -115,7 +115,8 @@ const appConfig = {
   },
 
   cors: {
-    origin: env.CORS_ORIGIN,
+    // Hỗ trợ nhiều origins (localhost dev + production)
+    origin: env.CORS_ORIGIN ? env.CORS_ORIGIN.split(',').map(o => o.trim()) : '*',
   },
 
   email: {

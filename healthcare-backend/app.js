@@ -42,8 +42,25 @@ app.use(helmet({
 }));
 
 // 🌐 CORS CONFIGURATION
+const corsOrigin = appConfig.cors.origin;
 app.use(cors({
-  origin: appConfig.cors.origin,
+  origin: function(origin, callback) {
+    // Cho phép requests không có origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    // Nếu là '*' cho phép tất cả
+    if (corsOrigin === '*') return callback(null, true);
+    
+    // Kiểm tra trong danh sách allowed origins
+    const allowedOrigins = Array.isArray(corsOrigin) ? corsOrigin : [corsOrigin];
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // Log và reject
+    console.log(`🚫 CORS blocked: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
