@@ -12,11 +12,7 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build argument for API URL (Render sẽ truyền vào)
-ARG VITE_API_URL=http://localhost:5000
-ENV VITE_API_URL=$VITE_API_URL
-
-# Build the application
+# Build the application (API URL is hardcoded in api.js as fallback)
 RUN npm run build
 
 # Stage 2: Serve with Nginx
