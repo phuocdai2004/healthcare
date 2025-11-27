@@ -110,8 +110,16 @@ async function registerUser({ email, name, password, role, creatorId, ip, userAg
     passwordHash: pwdHash,
     role: role || ROLES.PATIENT,
     createdBy: creatorId || null,
-    // 🔐 DEV MODE: Set tất cả user thành ACTIVE để test dễ, production sẽ yêu cầu email verification
-    status: process.env.NODE_ENV === 'production' && !creatorId ? 'PENDING_VERIFICATION' : 'ACTIVE'
+    // 🔐 Kích hoạt trạng thái user:
+    // - Nếu creatorId tồn tại (admin/staff tạo) => ACTIVE
+    // - Nếu không (self-register) và đang production => mặc định PENDING_VERIFICATION
+    // - Có thể override bằng biến môi trường ALLOW_SELF_ACTIVATE=true (dùng tạm cho staging)
+    status: (function() {
+      const allowSelfActivate = (process.env.ALLOW_SELF_ACTIVATE || 'false').toLowerCase() === 'true';
+      if (creatorId) return 'ACTIVE';
+      if (process.env.NODE_ENV === 'production' && !allowSelfActivate) return 'PENDING_VERIFICATION';
+      return 'ACTIVE';
+    })()
   });
 
   await user.save();
