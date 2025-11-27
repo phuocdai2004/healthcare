@@ -15,6 +15,7 @@ import SuperAdminRegister from './pages/SuperAdmin/Register';
 import SuperAdminDashboard from './pages/SuperAdmin/Dashboard';
 import PatientDashboard from './pages/PatientDashboard';
 import DoctorDashboard from './components/DoctorDashboard';
+import PaymentConfirmation from './components/PaymentConfirmation';
 import ForgotPassword from './pages/SuperAdmin/ForgotPassword';
 import ResetPassword from './pages/SuperAdmin/ResetPassword';
 
@@ -102,6 +103,16 @@ function AppContent() {
         element={
           <ProtectedRoute requiredRole="DOCTOR">
             <DoctorDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Payment Confirmation Route - Admin/Receptionist/Staff */}
+      <Route
+        path="/payments/confirm"
+        element={
+          <ProtectedRoute requiredRole={['ADMIN', 'RECEPTIONIST', 'STAFF', 'SUPER_ADMIN']}>
+            <PaymentConfirmation />
           </ProtectedRoute>
         }
       />

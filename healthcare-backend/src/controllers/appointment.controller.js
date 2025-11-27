@@ -316,6 +316,99 @@ class AppointmentController {
       next(error);
     }
   }
+
+  /**
+   * 💰 XÁC NHẬN THANH TOÁN (Admin/Staff)
+   */
+  async confirmPayment(req, res, next) {
+    try {
+      const { appointmentId } = req.params;
+      const paymentData = req.body;
+      const confirmedBy = req.user._id;
+
+      console.log('💰 [APPOINTMENT] Confirming payment for:', appointmentId);
+
+      const appointment = await appointmentService.confirmPayment(
+        appointmentId,
+        paymentData,
+        confirmedBy
+      );
+
+      // 🎯 AUDIT LOG
+      await auditLog(AUDIT_ACTIONS.APPOINTMENT_UPDATE, {
+        resource: 'Appointment',
+        resourceId: appointment._id,
+        category: 'PAYMENT_CONFIRMATION',
+        metadata: {
+          appointmentId: appointment.appointmentId,
+          amount: paymentData.amount,
+          method: paymentData.method
+        }
+      })(req, res, () => {});
+
+      res.json({
+        success: true,
+        message: 'Xác nhận thanh toán thành công',
+        data: appointment
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 💰 LẤY DANH SÁCH CHỜ XÁC NHẬN THANH TOÁN
+   */
+  async getPendingPayments(req, res, next) {
+    try {
+      const { page = 1, limit = 10 } = req.query;
+
+      console.log('💰 [APPOINTMENT] Getting pending payments');
+
+      const result = await appointmentService.getPendingPayments({
+        page: parseInt(page),
+        limit: parseInt(limit)
+      });
+
+      res.json({
+        success: true,
+        message: 'Lấy danh sách chờ thanh toán thành công',
+        data: result
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 👨‍⚕️ LẤY LỊCH HẸN ĐÃ THANH TOÁN CHO BÁC SĨ
+   */
+  async getDoctorPaidAppointments(req, res, next) {
+    try {
+      const doctorId = req.params.doctorId || req.user._id;
+      const { page = 1, limit = 10, date } = req.query;
+
+      console.log('👨‍⚕️ [APPOINTMENT] Getting paid appointments for doctor:', doctorId);
+
+      const result = await appointmentService.getDoctorPaidAppointments({
+        doctorId,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        date
+      });
+
+      res.json({
+        success: true,
+        message: 'Lấy danh sách lịch hẹn đã thanh toán thành công',
+        data: result
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new AppointmentController();

@@ -22,9 +22,13 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
     return <Navigate to="/superadmin/login" replace />;
   }
 
-  if (requiredRole && user?.role !== requiredRole) {
-    console.log('ProtectedRoute - Role mismatch:', user?.role, 'required:', requiredRole);
-    return <Navigate to="/" replace />;
+  // Support array of roles
+  if (requiredRole) {
+    const roles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    if (!roles.includes(user?.role)) {
+      console.log('ProtectedRoute - Role mismatch:', user?.role, 'required:', roles);
+      return <Navigate to="/" replace />;
+    }
   }
 
   console.log('ProtectedRoute - Access granted!');

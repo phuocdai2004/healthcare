@@ -89,6 +89,32 @@ const appointmentSchema = new mongoose.Schema({
     ref: 'Bill'
   },
   
+  // Thanh toán
+  payment: {
+    status: {
+      type: String,
+      enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+      default: 'PENDING'
+    },
+    method: {
+      type: String,
+      enum: ['CASH', 'BANK_TRANSFER', 'CARD', 'MOMO', 'VNPAY', 'ZALOPAY'],
+      default: 'BANK_TRANSFER'
+    },
+    amount: {
+      type: Number,
+      default: 0
+    },
+    transactionId: String,
+    paidAt: Date,
+    confirmedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    confirmedAt: Date,
+    notes: String
+  },
+  
   // Ghi chú
   notes: String,
   preparationInstructions: String,

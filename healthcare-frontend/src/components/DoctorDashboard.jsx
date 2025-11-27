@@ -443,6 +443,32 @@ const DoctorDashboard = () => {
       }
     },
     {
+      title: '💰 Thanh Toán',
+      dataIndex: ['payment', 'status'],
+      key: 'paymentStatus',
+      render: (paymentStatus) => {
+        const paymentColors = {
+          'PENDING': 'orange',
+          'PAID': 'cyan',
+          'CONFIRMED': 'green',
+          'FAILED': 'red',
+          'REFUNDED': 'purple'
+        };
+        const paymentLabels = {
+          'PENDING': '⏳ Chờ TT',
+          'PAID': '💳 Đã TT',
+          'CONFIRMED': '✅ Đã xác nhận',
+          'FAILED': '❌ Thất bại',
+          'REFUNDED': '↩️ Hoàn tiền'
+        };
+        return (
+          <Tag color={paymentColors[paymentStatus] || 'default'}>
+            {paymentLabels[paymentStatus] || 'Chưa TT'}
+          </Tag>
+        );
+      }
+    },
+    {
       title: 'Hành động',
       key: 'actions',
       width: 280,

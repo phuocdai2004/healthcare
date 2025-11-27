@@ -465,6 +465,143 @@ class AppointmentService {
     
     return slots;
   }
+
+  /**
+   * 💰 XÁC NHẬN THANH TOÁN (Admin/Staff)
+   */
+  async confirmPayment(appointmentId, paymentData, confirmedBy) {
+    try {
+      console.log('💰 [SERVICE] Confirming payment for:', appointmentId);
+
+      const appointment = await Appointment.findOne({ appointmentId });
+      
+      if (!appointment) {
+        throw new AppError('Không tìm thấy lịch hẹn', 404, ERROR_CODES.APPOINTMENT_NOT_FOUND);
+      }
+
+      if (appointment.payment?.status === 'PAID') {
+        throw new AppError('Lịch hẹn đã được thanh toán trước đó', 400, ERROR_CODES.ALREADY_PAID);
+      }
+
+      // Cập nhật thông tin thanh toán
+      appointment.payment = {
+        status: 'PAID',
+        method: paymentData.method || 'BANK_TRANSFER',
+        amount: paymentData.amount || 5000,
+        transactionId: paymentData.transactionId || `TXN${Date.now()}`,
+        paidAt: new Date(),
+        confirmedBy: confirmedBy,
+        confirmedAt: new Date(),
+        notes: paymentData.notes || ''
+      };
+
+      // Cập nhật trạng thái appointment thành CONFIRMED
+      appointment.status = 'CONFIRMED';
+      
+      await appointment.save();
+
+      // Populate kết quả
+      const result = await Appointment.findById(appointment._id)
+        .populate('patientId', 'name email phone')
+        .populate('doctorId', 'name email phone specialization')
+        .populate('payment.confirmedBy', 'name email');
+
+      console.log('✅ [SERVICE] Payment confirmed for:', appointmentId);
+      return result;
+
+    } catch (error) {
+      console.error('❌ [SERVICE] Payment confirmation failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * 💰 LẤY DANH SÁCH CHỜ XÁC NHẬN THANH TOÁN
+   */
+  async getPendingPayments({ page = 1, limit = 10 }) {
+    try {
+      const skip = (page - 1) * limit;
+
+      const query = {
+        'payment.status': { $in: ['PENDING', null] },
+        status: { $in: ['SCHEDULED', 'CONFIRMED'] }
+      };
+
+      const [appointments, total] = await Promise.all([
+        Appointment.find(query)
+          .populate('patientId', 'name email phone')
+          .populate('doctorId', 'name email specialization')
+          .sort({ createdAt: -1 })
+          .skip(skip)
+          .limit(limit),
+        Appointment.countDocuments(query)
+      ]);
+
+      return {
+        appointments,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          itemsPerPage: limit
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ [SERVICE] Get pending payments failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * 👨‍⚕️ LẤY LỊCH HẸN ĐÃ THANH TOÁN CHO BÁC SĨ
+   */
+  async getDoctorPaidAppointments({ doctorId, page = 1, limit = 10, date }) {
+    try {
+      const skip = (page - 1) * limit;
+
+      let query = {
+        doctorId,
+        'payment.status': 'PAID',
+        status: { $in: ['CONFIRMED', 'IN_PROGRESS'] }
+      };
+
+      if (date) {
+        const startOfDay = new Date(date);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(date);
+        endOfDay.setHours(23, 59, 59, 999);
+        
+        query.appointmentDate = {
+          $gte: startOfDay,
+          $lte: endOfDay
+        };
+      }
+
+      const [appointments, total] = await Promise.all([
+        Appointment.find(query)
+          .populate('patientId', 'name email phone dateOfBirth gender address')
+          .sort({ appointmentDate: 1 })
+          .skip(skip)
+          .limit(limit),
+        Appointment.countDocuments(query)
+      ]);
+
+      return {
+        appointments,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          itemsPerPage: limit
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ [SERVICE] Get doctor paid appointments failed:', error.message);
+      throw error;
+    }
+  }
 }
 
 module.exports = new AppointmentService();

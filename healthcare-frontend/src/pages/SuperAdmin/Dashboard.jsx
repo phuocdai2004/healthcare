@@ -32,6 +32,7 @@ import MedicalRecordManagement from '../../components/MedicalRecordManagement';
 import BillingManagement from '../../components/BillingManagement';
 import AuditLogViewer from '../../components/AuditLogViewer';
 import DoctorDashboard from '../../components/DoctorDashboard';
+import PaymentConfirmation from '../../components/PaymentConfirmation';
 import UserProfile from './UserProfile';
 import ChangePassword from './ChangePassword';
 import { apiClient } from '../../utils/api';
@@ -245,6 +246,12 @@ const SuperAdminDashboard = () => {
       key: '11',
       icon: <DashboardOutlined />,
       label: 'Dashboard Bác sĩ'
+    },
+    {
+      key: '12',
+      icon: <DollarOutlined />,
+      label: '💰 Xác nhận thanh toán',
+      style: { color: '#52c41a', fontWeight: 'bold' }
     }
   ];
 
@@ -572,6 +579,13 @@ const SuperAdminDashboard = () => {
               <div>
                 <h3 className="text-2xl font-bold mb-6">👨‍⚕️ Dashboard Bác sĩ</h3>
                 <DoctorDashboard />
+              </div>
+            )}
+
+            {selectedKey === '12' && (
+              <div>
+                <h3 className="text-2xl font-bold mb-6">💰 Xác Nhận Thanh Toán</h3>
+                <PaymentConfirmation />
               </div>
             )}
           </Spin>

@@ -20,6 +20,22 @@ const { authenticate } = require('../middlewares/auth.middleware');
 // 🎯 APPLY AUTH MIDDLEWARE CHO TẤT CẢ ROUTES
 router.use(authenticate);
 
+// 💰 LẤY DANH SÁCH CHỜ XÁC NHẬN THANH TOÁN (đặt trước các route có :params)
+router.get(
+  '/payments/pending',
+  requireRole(ROLES.RECEPTIONIST, ROLES.HOSPITAL_ADMIN, ROLES.SUPER_ADMIN),
+  requirePermission(PERMISSIONS.APPOINTMENT_VIEW),
+  appointmentController.getPendingPayments
+);
+
+// 👨‍⚕️ LẤY LỊCH HẸN ĐÃ THANH TOÁN CỦA BÁC SĨ ĐANG LOGIN
+router.get(
+  '/my/paid',
+  requireRole(ROLES.DOCTOR),
+  requirePermission(PERMISSIONS.APPOINTMENT_VIEW),
+  appointmentController.getDoctorPaidAppointments
+);
+
 // 🎯 TẠO LỊCH HẸN
 router.post(
   '/',
@@ -46,6 +62,14 @@ router.get(
   requirePermission(PERMISSIONS.APPOINTMENT_VIEW),
   validateQuery(appointmentValidation.getDoctorAppointments),
   appointmentController.getDoctorAppointments
+);
+
+// 👨‍⚕️ LẤY LỊCH HẸN ĐÃ THANH TOÁN CHO BÁC SĨ
+router.get(
+  '/doctor/:doctorId/paid',
+  requireRole(ROLES.DOCTOR, ROLES.HOSPITAL_ADMIN, ROLES.SUPER_ADMIN),
+  requirePermission(PERMISSIONS.APPOINTMENT_VIEW),
+  appointmentController.getDoctorPaidAppointments
 );
 
 // 🎯 LẤY THÔNG TIN LỊCH HẸN CHI TIẾT
@@ -98,6 +122,14 @@ router.get(
   requirePermission(PERMISSIONS.APPOINTMENT_VIEW_SCHEDULE),
   validateQuery(appointmentValidation.getDoctorSchedule),
   appointmentController.getDoctorSchedule
+);
+
+// 💰 XÁC NHẬN THANH TOÁN (Admin/Staff/Receptionist)
+router.post(
+  '/:appointmentId/payment/confirm',
+  requireRole(ROLES.RECEPTIONIST, ROLES.HOSPITAL_ADMIN, ROLES.SUPER_ADMIN),
+  requirePermission(PERMISSIONS.APPOINTMENT_UPDATE),
+  appointmentController.confirmPayment
 );
 
 module.exports = router;

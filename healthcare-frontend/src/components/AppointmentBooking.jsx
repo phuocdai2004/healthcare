@@ -9,6 +9,7 @@ const AppointmentBooking = (props) => {
   const [showPayment, setShowPayment] = useState(false);
   const [doctors, setDoctors] = useState([]); // Danh sách bác sĩ từ API
   const [loading, setLoading] = useState(false);
+  const [createdAppointment, setCreatedAppointment] = useState(null); // Lưu appointment đã tạo
   const [data, setData] = useState({
     dept: null,
     doc: null,
@@ -88,33 +89,33 @@ const AppointmentBooking = (props) => {
     setStep(0);
     setData({ dept: null, doc: null, date: null, slot: null, symptoms: '', price: 0 });
     setPaymentMethod(null);
+    setCreatedAppointment(null);
   };
 
-  const handlePaymentSuccess = async () => {
+  // 🆕 Tạo appointment trước khi hiện thanh toán (để có mã AP)
+  const handleShowPayment = async () => {
     try {
       if (!data.doc || !data.date || !data.slot) {
-        message.error('Vui lòng hoàn tất đặt lịch trước khi thanh toán');
+        message.error('Vui lòng chọn đầy đủ thông tin trước');
         return;
       }
 
-      // Lấy patientId từ user (AuthContext) thay vì từ patient object
       const patientId = props.user?._id;
       if (!patientId) {
-        message.error('Không xác định được bệnh nhân. Vui lòng đăng nhập lại.');
+        message.error('Vui lòng đăng nhập lại');
         return;
       }
 
-      // Lấy thông tin bác sĩ đã chọn
-      const selectedDoctor = doctors.find(d => d.id === data.doc);
+      setLoading(true);
 
-      // Parse thời gian từ slot (vd: "08:00 - 08:30")
-      const slotStartTime = data.slot.split(' - ')[0]; // "08:00"
+      const selectedDoctor = doctors.find(d => d.id === data.doc);
+      const slotStartTime = data.slot.split(' - ')[0];
       const appointmentDateTime = data.date.format('YYYY-MM-DD') + 'T' + slotStartTime + ':00';
 
-      // 1️⃣ TẠO LỊCH HẸN MỚI
+      // Tạo appointment với trạng thái chờ thanh toán
       const appointmentPayload = {
         patientId: patientId,
-        doctorId: data.doc, // ID thực từ database
+        doctorId: data.doc,
         appointmentDate: appointmentDateTime,
         type: 'CONSULTATION',
         mode: 'IN_PERSON',
@@ -125,19 +126,59 @@ const AppointmentBooking = (props) => {
         duration: 30
       };
 
-      console.log('📅 Creating appointment:', appointmentPayload);
+      console.log('📅 Creating appointment for payment:', appointmentPayload);
       const createRes = await apiClient.post('/appointments', appointmentPayload);
       const newAppointment = createRes.data.data;
-      const appointmentId = newAppointment.appointmentId;
+      
+      console.log('✅ Appointment created:', newAppointment.appointmentId);
+      setCreatedAppointment(newAppointment);
+      setShowPayment(true);
+      
+      message.info(`Mã lịch hẹn: ${newAppointment.appointmentId} - Vui lòng thanh toán`);
 
-      console.log('✅ Appointment created:', appointmentId);
+    } catch (err) {
+      console.error('❌ Lỗi tạo lịch hẹn:', err);
+      message.error(err.response?.data?.message || 'Không thể tạo lịch hẹn');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // 2️⃣ XÁC NHẬN VÀ TẠO HÓA ĐƠN
-      await apiClient.post(`/appointments/${appointmentId}/confirm`);
+  const handlePaymentSuccess = async () => {
+    try {
+      // Kiểm tra đã có appointment chưa
+      if (!createdAppointment) {
+        message.error('Chưa tạo lịch hẹn. Vui lòng thử lại.');
+        return;
+      }
+
+      const appointmentId = createdAppointment.appointmentId;
+
+      // Nếu thanh toán QR - chỉ thông báo chờ xác nhận tự động
+      if (paymentMethod === 'qr') {
+        message.success(
+          `✅ Đã tạo lịch hẹn ${appointmentId}. Hệ thống sẽ tự động xác nhận sau khi nhận được chuyển khoản!`,
+          5
+        );
+        
+        if (props.onSuccess) {
+          props.onSuccess();
+        }
+        
+        setShowPayment(false);
+        handleReset();
+        return;
+      }
+
+      // Nếu thanh toán khác (tiền mặt, ví) - confirm ngay
+      await apiClient.post(`/appointments/${appointmentId}/payment/confirm`, {
+        method: paymentMethod === 'bank' ? 'BANK_TRANSFER' : paymentMethod === 'wallet' ? 'CASH' : 'CASH',
+        amount: data.price || 5000,
+        notes: 'Thanh toán tại quầy'
+      });
       
       message.success(`Thanh toán thành công! Mã khám: ${appointmentId}`);
       
-      // 3️⃣ REFRESH DASHBOARD
       if (props.onSuccess) {
         props.onSuccess();
       }
@@ -480,7 +521,7 @@ const AppointmentBooking = (props) => {
                     Vui lòng đến 10 phút trước giờ khám. Thanh toán tại quầy hoặc qua ứng dụng.
                   </div>
                   <Space direction="vertical" style={{ width: '100%' }} size="small">
-                    <Button block size="large" type="primary" onClick={() => setShowPayment(true)}
+                    <Button block size="large" type="primary" onClick={handleShowPayment} loading={loading}
                       style={{ borderRadius: '8px', height: '40px', fontSize: '15px', fontWeight: '600' }}>
                       Chọn Phương Thức Thanh Toán
                     </Button>
@@ -531,8 +572,8 @@ const AppointmentBooking = (props) => {
                 background: paymentMethod === 'qr' ? '#1890ff' : '#fff'
               }} />
               <div>
-                <div style={{ fontWeight: '600', fontSize: '15px', marginBottom: '4px' }}>📱 QR Code (Momo, Zalopay)</div>
-                <div style={{ fontSize: '13px', color: '#666' }}>Quét mã QR để thanh toán qua ứng dụng</div>
+                <div style={{ fontWeight: '600', fontSize: '15px', marginBottom: '4px' }}>🏦 QR Chuyển Khoản Ngân Hàng</div>
+                <div style={{ fontSize: '13px', color: '#666' }}>Quét bằng app ngân hàng (MB, VCB, TCB, BIDV...)</div>
               </div>
             </div>
           </div>
@@ -573,13 +614,21 @@ const AppointmentBooking = (props) => {
                 </div>
               </div>
             )}
-            {paymentMethod === 'qr' && (
+            {paymentMethod === 'qr' && createdAppointment && (
               <div style={{ textAlign: 'center' }}>
-                <p style={{ fontSize: '13px', color: '#666', marginBottom: '12px' }}>
-                  Quét mã QR bằng app ngân hàng hoặc Momo/ZaloPay để thanh toán
+                <div style={{ background: '#e6f7ff', padding: '10px', borderRadius: '8px', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '14px', color: '#1890ff', fontWeight: '600' }}>
+                    📋 Mã lịch hẹn: <span style={{ fontFamily: 'monospace', fontSize: '16px' }}>{createdAppointment.appointmentId}</span>
+                  </div>
+                </div>
+                <p style={{ fontSize: '13px', color: '#666', marginBottom: '8px' }}>
+                  🏦 Quét mã QR bằng <strong>app ngân hàng</strong> để thanh toán
                 </p>
+                <div style={{ background: '#fff7e6', padding: '8px', borderRadius: '6px', marginBottom: '12px', fontSize: '12px', color: '#d46b08' }}>
+                  ⚠️ <strong>QUAN TRỌNG:</strong> Nội dung chuyển khoản phải có mã <strong>{createdAppointment.appointmentId}</strong>
+                </div>
                 <img 
-                  src={`https://img.vietqr.io/image/MB-90024122004-compact2.png?amount=${data.price}&addInfo=Thanh%20toan%20kham%20benh&accountName=NGUYEN%20PHUOC%20DAI`}
+                  src={`https://img.vietqr.io/image/MB-90024122004-compact2.png?amount=${data.price}&addInfo=${encodeURIComponent(createdAppointment.appointmentId + ' Thanh toan kham benh')}&accountName=NGUYEN%20PHUOC%20DAI`}
                   alt="QR Code Thanh Toán"
                   style={{
                     width: '250px', 
@@ -591,7 +640,12 @@ const AppointmentBooking = (props) => {
                 />
                 <div style={{ marginTop: '12px', fontSize: '13px', color: '#666' }}>
                   <div><strong>Số tiền:</strong> <span style={{ color: '#1890ff', fontWeight: '700' }}>{data.price.toLocaleString('vi-VN')} ₫</span></div>
-                  <div><strong>Nội dung:</strong> Thanh toan kham benh</div>
+                  <div><strong>Nội dung:</strong> <span style={{ color: '#52c41a', fontWeight: '600' }}>{createdAppointment.appointmentId} Thanh toan kham benh</span></div>
+                </div>
+                <div style={{ marginTop: '16px', padding: '12px', background: '#f6ffed', borderRadius: '8px', border: '1px solid #b7eb8f' }}>
+                  <div style={{ fontSize: '13px', color: '#52c41a' }}>
+                    ✅ Sau khi chuyển khoản, hệ thống sẽ <strong>tự động xác nhận</strong> trong 1-5 phút
+                  </div>
                 </div>
               </div>
             )}

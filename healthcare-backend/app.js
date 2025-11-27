@@ -18,6 +18,7 @@ const labRoutes = require('./src/routes/lab.routes');
 const billingRoutes = require('./src/routes/billing.routes');
 const consultationRoutes = require('./src/routes/consultation.routes');
 const superAdminRoutes = require('./src/routes/superAdmin.routes');
+const webhookRoutes = require('./src/routes/webhook.routes');
 
 /**
  * ỨNG DỤNG EXPRESS CHÍNH
@@ -112,6 +113,7 @@ app.use('/api/lab', labRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/consultation', consultationRoutes);
 app.use('/api/super-admin', superAdminRoutes);
+app.use('/api/webhook', webhookRoutes); // 🔔 Webhook cho thanh toán tự động
 
 // 🔍 DEBUG ENDPOINT (chỉ trong development)
 if (appConfig.isDev) {
