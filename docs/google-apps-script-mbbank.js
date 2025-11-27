@@ -18,15 +18,14 @@
 
 // ===== CẤU HÌNH =====
 const CONFIG = {
-  // 🔗 URL webhook backend của bạn (đổi khi deploy lên Render)
-  WEBHOOK_URL: 'http://localhost:5000/api/webhook/payment',
-  // WEBHOOK_URL: 'https://your-backend.onrender.com/api/webhook/payment',
+  // 🔗 URL webhook backend của bạn (qua ngrok)
+  WEBHOOK_URL: 'https://maleah-nonambitious-histrionically.ngrok-free.dev/api/webhook/payment',
   
   // 🔐 Secret key (phải khớp với backend)
   WEBHOOK_SECRET: 'healthcare-payment-secret-2024',
   
-  // 📧 Từ khóa tìm email MB Bank
-  SEARCH_QUERY: 'from:mbbank subject:Thông báo biến động số dư',
+  // 📧 Từ khóa tìm email MB Bank (đã cập nhật theo email thực tế)
+  SEARCH_QUERY: 'from:mbebanking@mbbank.com.vn',
   
   // ⏰ Chỉ xử lý email trong vòng X phút gần đây
   MINUTES_AGO: 30
@@ -88,32 +87,87 @@ function processEmail(message) {
 
 /**
  * 🔍 Parse nội dung email MB Bank
- * Email mẫu:
- * "Tài khoản 90024122004 + 5,000 VND lúc 27-11-2024 10:30:45. 
- *  Số dư 1,234,567 VND. 
- *  Nội dung: AP12345678 Thanh toan kham benh"
+ * 
+ * Email mẫu thực tế từ mbebanking@mbbank.com.vn:
+ * 
+ * *Ngày, giờ giao dịch*
+ * 12-10-2025 23:08:32
+ * 
+ * *Loại giao dịch*
+ * Chuyển tiền nội bộ
+ * 
+ * *Số tham chiếu*
+ * 25101223081320203
+ * 
+ * *Tài khoản trích nợ* (tiền ĐI) hoặc *Tài khoản ghi có* (tiền VÀO)
+ * NGUYEN PHUOC DAI - 90024122004 (VND)
+ * 
+ * *Số tiền giao dịch*
+ * (VND) 700,000.00
+ * 
+ * *Nội dung chuyển tiền*
+ * NGUYEN PHUOC DAI chuyen tien
  */
 function parseMBBankEmail(body) {
   try {
-    // Regex tìm số tiền (+ X,XXX VND hoặc + X.XXX VND)
-    const amountMatch = body.match(/\+\s*([\d,\.]+)\s*VND/i);
+    console.log('📄 Parsing email body...');
+    console.log('📄 Full body length:', body.length);
     
-    // Regex tìm nội dung chuyển khoản
-    const contentMatch = body.match(/Nội dung[:\s]*(.*?)(?:\.|$)/i);
+    // Regex tìm số tiền - format: (VND) 30,000.00 (nằm trên dòng riêng)
+    const amountMatch = body.match(/\(VND\)\s*([\d,]+)(?:\.00)?/i);
     
-    // Regex tìm mã giao dịch
-    const transactionMatch = body.match(/(?:Mã GD|Ref)[:\s]*(\w+)/i);
+    // Regex tìm nội dung chuyển tiền - format mới với *Nội dung*
+    // Pattern: *Nội dung chuyển tiền* hoặc *Nội dung* theo sau là dòng mới và nội dung
+    let content = '';
+    
+    // Thử pattern 1: *Nội dung chuyển tiền* \n content
+    const contentMatch1 = body.match(/\*Nội dung(?:\s+chuyển tiền)?\*[\s\n\r]+([^\n\r\*]+)/i);
+    if (contentMatch1) {
+      content = contentMatch1[1].trim();
+    }
+    
+    // Thử pattern 2: Nội dung chuyển tiền: content (cùng dòng)
+    if (!content) {
+      const contentMatch2 = body.match(/Nội dung[^:]*:\s*([^\n\r]+)/i);
+      if (contentMatch2) {
+        content = contentMatch2[1].trim();
+      }
+    }
+    
+    // Regex tìm số tham chiếu - format: *Số tham chiếu* \n 25101223081320203
+    let transactionId = `MB${Date.now()}`;
+    const refMatch1 = body.match(/\*Số tham chiếu\*[\s\n\r]+(\d+)/i);
+    if (refMatch1) {
+      transactionId = refMatch1[1];
+    } else {
+      const refMatch2 = body.match(/Số tham chiếu[:\s]*(\d+)/i);
+      if (refMatch2) {
+        transactionId = refMatch2[1];
+      }
+    }
+    
+    // Kiểm tra xem có phải tiền VÀO không
+    // "Tài khoản ghi có" = tiền VÀO
+    // "Tài khoản trích nợ" = tiền ĐI
+    const isIncoming = body.includes('Tài khoản ghi có') || 
+                       body.includes('tiền vào') || 
+                       body.includes('nhận được');
     
     if (amountMatch) {
-      const amount = parseFloat(amountMatch[1].replace(/[,\.]/g, ''));
-      const content = contentMatch ? contentMatch[1].trim() : '';
-      const transactionId = transactionMatch ? transactionMatch[1] : `MB${Date.now()}`;
+      const amountStr = amountMatch[1].replace(/,/g, '');
+      const amount = parseFloat(amountStr);
+      
+      console.log(`💰 Amount: ${amount}`);
+      console.log(`📝 Content: "${content}"`);
+      console.log(`🔖 TransactionId: ${transactionId}`);
+      console.log(`📥 Is incoming: ${isIncoming}`);
       
       return {
         amount: amount,
         content: content,
         transactionId: transactionId,
-        bankAccount: '90024122004'
+        bankAccount: '90024122004',
+        isIncoming: isIncoming
       };
     }
     
@@ -145,6 +199,9 @@ function sendWebhook(paymentInfo, timestamp) {
     const response = UrlFetchApp.fetch(CONFIG.WEBHOOK_URL, {
       method: 'POST',
       contentType: 'application/json',
+      headers: {
+        'ngrok-skip-browser-warning': 'true'  // Bypass ngrok browser warning
+      },
       payload: JSON.stringify(payload),
       muteHttpExceptions: true
     });
@@ -215,6 +272,9 @@ function testWebhook() {
     const response = UrlFetchApp.fetch(CONFIG.WEBHOOK_URL, {
       method: 'POST',
       contentType: 'application/json',
+      headers: {
+        'ngrok-skip-browser-warning': 'true'  // Bypass ngrok browser warning
+      },
       payload: JSON.stringify(testPayload),
       muteHttpExceptions: true
     });
@@ -228,17 +288,56 @@ function testWebhook() {
 }
 
 /**
- * 🧪 TEST - Simulate email parsing
+ * 🧪 TEST - Simulate email parsing với format thực tế
  */
 function testParsing() {
+  // Email mẫu ĐÚNG format thực tế từ MB Bank (có dấu * và xuống dòng)
   const sampleEmail = `
-    MB Bank thông báo:
-    Tài khoản 90024122004 + 5,000 VND lúc 27-11-2024 10:30:45.
-    Số dư 1,234,567 VND.
-    Nội dung: AP12345678 Thanh toan kham benh
-    Mã GD: FT24123456789
+Cảm ơn Quý khách đã sử dụng dịch vụ MB eBanking.
+MB xin thông báo giao dịch của Quý khách đã được thực hiện như sau:
+
+
+*Ngày, giờ giao dịch*
+
+27-11-2025 08:50:03
+
+*Loại giao dịch*
+
+Chuyển tiền nhanh ngoài MB
+
+*Số tham chiếu*
+
+25112708501360203
+
+*Tài khoản ghi có*
+
+NGUYEN PHUOC DAI - 90024122004 (VND)
+
+*Số tiền giao dịch*
+
+(VND) 5,000.00
+
+*Nội dung chuyển tiền*
+
+683559cd1bae81af3e65d0c4 KCB
+
+*Tình trạng*
+
+Giao dịch thành công
   `;
   
+  console.log('🧪 Testing with real MB Bank email format...');
   const result = parseMBBankEmail(sampleEmail);
   console.log('Parsed result:', JSON.stringify(result, null, 2));
+  
+  // Kiểm tra kết quả
+  if (result) {
+    console.log('\n✅ Parse successful!');
+    console.log(`   Amount: ${result.amount} (expected: 5000)`);
+    console.log(`   Content: "${result.content}" (expected: "683559cd1bae81af3e65d0c4 KCB")`);
+    console.log(`   TransactionId: ${result.transactionId} (expected: "25112708501360203")`);
+    console.log(`   IsIncoming: ${result.isIncoming} (expected: true)`);
+  } else {
+    console.log('\n❌ Parse failed!');
+  }
 }
