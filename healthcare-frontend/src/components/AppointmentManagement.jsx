@@ -55,14 +55,30 @@ const AppointmentManagement = () => {
   const fetchAppointments = async () => {
     try {
       setLoading(true);
-      // ❌ Backend doesn't have generic /appointments endpoint
-      // Available endpoints: /appointments/patient/:patientId and /appointments/doctor/:doctorId
-      // For now, show empty state
-      setAppointments([]);
-      message.info('Chức năng này sẽ được cập nhật. Vui lòng xem lịch hẹn từ trang chi tiết bệnh nhân hoặc bác sĩ.');
+      // ✅ Sử dụng endpoint mới để lấy tất cả lịch hẹn
+      const response = await apiClient.get('/appointments/all', {
+        params: {
+          page: pagination.page,
+          limit: pagination.limit,
+          status: filterStatus || undefined,
+          sortBy: 'appointmentDate',
+          sortOrder: 'desc'
+        }
+      });
+
+      if (response.data.success) {
+        setAppointments(response.data.data);
+        setPagination({
+          page: response.data.pagination.currentPage,
+          limit: response.data.pagination.itemsPerPage,
+          total: response.data.pagination.totalItems,
+          totalPages: response.data.pagination.totalPages
+        });
+        message.success(`Tải ${response.data.data.length} lịch hẹn thành công`);
+      }
     } catch (err) {
       console.error('Error fetching appointments:', err);
-      message.error('Không thể tải danh sách lịch hẹn');
+      message.error(err.response?.data?.error || 'Không thể tải danh sách lịch hẹn');
     } finally {
       setLoading(false);
     }

@@ -409,6 +409,75 @@ class AppointmentController {
       next(error);
     }
   }
+
+  /**
+   * 👨‍⚕️ LẤY LỊCH HẸN ĐÃ THANH TOÁN CHO BÁC SĨ
+   */
+  async getDoctorPaidAppointments(req, res, next) {
+    try {
+      const doctorId = req.params.doctorId || req.user._id;
+      const { page = 1, limit = 10, date } = req.query;
+
+      console.log('👨‍⚕️ [APPOINTMENT] Getting paid appointments for doctor:', doctorId);
+
+      const result = await appointmentService.getDoctorPaidAppointments({
+        doctorId,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        date
+      });
+
+      res.json({
+        success: true,
+        message: 'Lấy danh sách lịch hẹn đã thanh toán thành công',
+        data: result
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 📅 LẤY TẤT CẢ LỊCH HẸN (cho admin/manager quản lý)
+   */
+  async getAllAppointments(req, res, next) {
+    try {
+      const { page = 1, limit = 20, status = '', doctorId = '', patientId = '', sortBy = 'appointmentDate', sortOrder = 'desc' } = req.query;
+
+      console.log('📅 [APPOINTMENT] Getting all appointments with filters:', { page, limit, status, doctorId, patientId });
+
+      const result = await appointmentService.getAllAppointments({
+        page: parseInt(page),
+        limit: parseInt(limit),
+        status,
+        doctorId,
+        patientId,
+        sortBy,
+        sortOrder
+      });
+
+      // 🎯 AUDIT LOG
+      await auditLog(AUDIT_ACTIONS.APPOINTMENT_VIEW, {
+        resource: 'Appointment',
+        metadata: { 
+          totalAppointments: result.pagination.totalItems,
+          filters: { status, doctorId, patientId }
+        }
+      })(req, res, () => {});
+
+      res.json({
+        success: true,
+        message: 'Lấy danh sách lịch hẹn thành công',
+        data: result.appointments,
+        pagination: result.pagination,
+        summary: result.summary
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new AppointmentController();

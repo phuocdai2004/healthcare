@@ -618,6 +618,90 @@ class AppointmentService {
       throw error;
     }
   }
+
+  /**
+   * 🎯 LẤY TẤT CẢ LỊCH HẸN (cho ADMIN/MANAGER quản lý)
+   */
+  async getAllAppointments({ page = 1, limit = 20, status = '', doctorId = '', patientId = '', sortBy = 'appointmentDate', sortOrder = 'desc' }) {
+    try {
+      console.log('📅 [SERVICE] Getting all appointments with filters');
+
+      // 🎯 XÂY DỰNG QUERY
+      const query = {};
+      
+      if (status) {
+        query.status = status;
+      }
+      
+      if (doctorId) {
+        query.doctorId = doctorId;
+      }
+      
+      if (patientId) {
+        query.patientId = patientId;
+      }
+
+      // 🎯 TÍNH TOÁN PAGINATION
+      const skip = (page - 1) * limit;
+      const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
+
+      // 🎯 QUERY DATABASE
+      const [appointments, total] = await Promise.all([
+        Appointment.find(query)
+          .populate('patientId', 'name email phone gender dateOfBirth')
+          .populate('doctorId', 'name email phone specialization')
+          .populate('createdBy', 'name email')
+          .sort(sort)
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        Appointment.countDocuments(query)
+      ]);
+
+      console.log(`✅ [SERVICE] Found ${appointments.length} appointments (total: ${total})`);
+
+      return {
+        appointments,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total,
+          itemsPerPage: limit,
+          hasNext: page < Math.ceil(total / limit),
+          hasPrev: page > 1
+        },
+        summary: {
+          total: total,
+          statuses: await this.getAppointmentStatusSummary(query)
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ [SERVICE] Get all appointments failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * 🎯 LẤY THỐNG KÊ LỊCH HẸN THEO TRẠNG THÁI
+   */
+  async getAppointmentStatusSummary(baseQuery = {}) {
+    try {
+      const statuses = ['SCHEDULED', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'NO_SHOW'];
+      const summary = {};
+
+      for (const status of statuses) {
+        const count = await Appointment.countDocuments({ ...baseQuery, status });
+        summary[status] = count;
+      }
+
+      return summary;
+
+    } catch (error) {
+      console.error('❌ [SERVICE] Get appointment status summary failed:', error.message);
+      throw error;
+    }
+  }
 }
 
 module.exports = new AppointmentService();

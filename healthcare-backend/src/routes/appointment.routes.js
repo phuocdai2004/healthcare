@@ -20,6 +20,14 @@ const { authenticate } = require('../middlewares/auth.middleware');
 // 🎯 APPLY AUTH MIDDLEWARE CHO TẤT CẢ ROUTES
 router.use(authenticate);
 
+// 📅 LẤY TẤT CẢ LỊCH HẸN (đặt trước routes có :params)
+router.get(
+  '/all',
+  requireRole(ROLES.RECEPTIONIST, ROLES.HOSPITAL_ADMIN, ROLES.MANAGER, ROLES.SUPER_ADMIN),
+  requirePermission(PERMISSIONS.APPOINTMENT_VIEW),
+  appointmentController.getAllAppointments
+);
+
 // 💰 LẤY DANH SÁCH CHỜ XÁC NHẬN THANH TOÁN (đặt trước các route có :params)
 router.get(
   '/payments/pending',
