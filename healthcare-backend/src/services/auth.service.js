@@ -1,753 +1,424 @@
+// src/services/auth.service.js
+const ms = require('ms');
 const User = require('../models/user.model');
+const RefreshToken = require('../models/refreshToken.model');
+const { hashPassword, comparePassword, randomTokenHex, sha256 } = require('../utils/hash');
+const { signAccessToken } = require('../utils/jwt');
+const { appConfig } = require('../config');
+const { log } = require('./audit.service');
 const Patient = require('../models/patient.model');
-const AuditLog = require('../models/auditLog.model');
-const Session = require('../models/session.model'); // Thêm model session mới
-const { 
-  hashPassword, 
-  comparePassword, 
-  validatePasswordStrength,
-  randomTokenHex 
-} = require('../utils/hash');
-const { 
-  generateTokenPair, 
-  verifyRefreshToken,
-  signAccessToken
-} = require('../utils/jwt');
-const { ROLES } = require('../constants/roles');
-const { AppError, ERROR_CODES } = require('../middlewares/error.middleware');
-const emailService = require('../utils/email');
+const speakeasy = require('speakeasy');
+const { getRefreshExpiryMs } = require('../config/jwt.config');
+const { ROLES, ROLE_PERMISSIONS } = require('../constants/roles');
 
 /**
- * 🛡️ AUTHENTICATION SERVICE CHO HEALTHCARE SYSTEM - HOÀN THIỆN
+ * DỊCH VỤ XÁC THỰC & QUẢN LÝ NGƯỜI DÙNG
+ * - Xử lý logic đăng ký, đăng nhập, quản lý token
+ * - Hỗ trợ xác thực 2 yếu tố (2FA)
  */
 
-class AuthService {
-  /**
-   * 🎯 ĐĂNG NHẬP - HOÀN THIỆN
-   */
-  async login(email, password, ipAddress, userAgent) {
-    try {
-      console.log('🔐 [AUTH SERVICE] Login attempt:', { email, ipAddress });
+/**
+ * TẠO REFRESH TOKEN MỚI CHO USER
+ * 
+ * @param {string} userId - ID người dùng
+ * @param {Object} options - Thông tin bổ sung
+ * @param {string} options.ip - Địa chỉ IP
+ * @param {string} options.device - Thông tin thiết bị
+ * @returns {Promise<string>} Raw refresh token
+ */
+async function createRefreshToken(userId, { ip, device }) {
+  const raw = randomTokenHex(48);
+  const hash = sha256(raw);
+  const expiresAt = new Date(Date.now() + getRefreshExpiryMs());
+  
+  await RefreshToken.create({
+    user: userId,
+    tokenHash: hash,
+    ip,
+    device,
+    expiresAt,
+  });
+  
+  return raw;
+}
 
-      // 🎯 TÌM USER THEO EMAIL
-      const user = await User.findOne({ email: email.toLowerCase() });
-      
-      if (!user) {
-        await this.logFailedLoginAttempt(email, ipAddress, 'USER_NOT_FOUND');
-        throw new AppError('Email hoặc mật khẩu không đúng', 401, ERROR_CODES.AUTH_INVALID_CREDENTIALS);
-      }
+/**
+ * XOAY VÒNG REFRESH TOKEN (TOKEN ROTATION)
+ * - Vô hiệu hóa token cũ, tạo token mới
+ * - Tăng cường bảo mật
+ * 
+ * @param {string} oldTokenRaw - Refresh token cũ
+ * @param {string} userId - ID người dùng
+ * @param {Object} opts - Tùy chọn
+ * @returns {Promise<string>} Refresh token mới
+ */
+async function rotateRefreshToken(oldTokenRaw, userId, opts) {
+  const oldHash = sha256(oldTokenRaw);
+  const tokenRec = await RefreshToken.findOne({ 
+    user: userId, 
+    tokenHash: oldHash 
+  });
 
-      // 🎯 KIỂM TRA TRẠNG THÁI TÀI KHOẢN
-      const userStatus = user.status || 'ACTIVE';
+  // 🔒 KIỂM TRA TOKEN HỢP LỆ
+  if (!tokenRec || tokenRec.revoked) {
+    // VÔ HIỆU HÓA TẤT CẢ TOKEN CỦA USER NẾU PHÁT HIỆN BẤT THƯỜNG
+    await RefreshToken.updateMany({ user: userId }, { revoked: true });
+    throw new Error('Refresh token không hợp lệ hoặc đã bị thu hồi');
+  }
+
+  // 🗑️ ĐÁNH DẤU TOKEN CŨ ĐÃ BỊ THU HỒI
+  tokenRec.revoked = true;
+  const newRaw = randomTokenHex(48);
+  const newHash = sha256(newRaw);
+  tokenRec.replacedBy = newHash;
+  await tokenRec.save();
+
+  // 🆕 TẠO TOKEN MỚI
+  const expiresAt = new Date(Date.now() + getRefreshExpiryMs());
+  await RefreshToken.create({
+    user: userId,
+    tokenHash: newHash,
+    ip: opts.ip,
+    device: opts.device,
+    expiresAt,
+  });
+
+  return newRaw;
+}
+
+/**
+ * ĐĂNG KÝ TÀI KHOẢN NGƯỜI DÙNG MỚI
+ * 
+ * @param {Object} userData - Thông tin đăng ký
+ * @returns {Promise<Object>} User object
+ */
+/**
+ * Đăng ký user mới với RBAC
+ */
+async function registerUser({ email, name, password, role, creatorId, ip, userAgent }) {
+  const exists = await User.findOne({ email });
+  if (exists) {
+    throw new Error('Email đã được sử dụng');
+  }
+
+  const pwdHash = await hashPassword(password);
+  
+  // User sẽ tự động tính toán canCreate trong pre-save middleware
+  const user = new User({
+    email,
+    name,
+    passwordHash: pwdHash,
+    role: role || ROLES.PATIENT,
+    createdBy: creatorId || null,
+    // 🔐 Kích hoạt trạng thái user:
+    // - Nếu creatorId tồn tại (admin/staff tạo) => ACTIVE
+    // - Nếu không (self-register) và đang production => mặc định PENDING_VERIFICATION
+    // - Có thể override bằng biến môi trường ALLOW_SELF_ACTIVATE=true (dùng tạm cho staging)
+    status: (function() {
       const allowSelfActivate = (process.env.ALLOW_SELF_ACTIVATE || 'false').toLowerCase() === 'true';
-      const isValidStatus = userStatus === 'ACTIVE' || (userStatus === 'PENDING_VERIFICATION' && allowSelfActivate);
-      
-      if (!isValidStatus) {
-        await this.logFailedLoginAttempt(user.email, ipAddress, 'ACCOUNT_INACTIVE');
-        throw new AppError(this.getAccountStatusMessage(userStatus), 403, ERROR_CODES.AUTH_ACCOUNT_LOCKED);
-      }
+      if (creatorId) return 'ACTIVE';
+      if (process.env.NODE_ENV === 'production' && !allowSelfActivate) return 'PENDING_VERIFICATION';
+      return 'ACTIVE';
+    })()
+  });
 
-      // 🎯 KIỂM TRA TÀI KHOẢN BỊ KHÓA
-      if (user.lockUntil && user.lockUntil > Date.now()) {
-        await this.logFailedLoginAttempt(user.email, ipAddress, 'ACCOUNT_LOCKED');
-        throw new AppError(
-          'Tài khoản đã bị khóa do đăng nhập sai nhiều lần. Vui lòng thử lại sau 2 giờ.',
-          423,
-          ERROR_CODES.AUTH_ACCOUNT_LOCKED
-        );
-      }
-
-      // 🎯 XÁC THỰC MẬT KHẨU (hỗ trợ cả password và passwordHash từ Web backend)
-      const storedPassword = user.password || user.passwordHash;
-      const isPasswordValid = await comparePassword(password, storedPassword);
-
-      if (!isPasswordValid) {
-        // Xử lý increment login attempts
-        try {
-          if (typeof user.incrementLoginAttempts === 'function') {
-            await user.incrementLoginAttempts();
-          } else {
-            await User.findByIdAndUpdate(user._id, { $inc: { loginAttempts: 1 } });
-          }
-        } catch (updateError) {
-          console.error('❌ Error updating login attempts:', updateError.message);
-        }
-
-        await this.logFailedLoginAttempt(user.email, ipAddress, 'INVALID_PASSWORD');
-        
-        const currentAttempts = (user.loginAttempts || 0) + 1;
-        const attemptsLeft = 5 - currentAttempts;
-        
-        if (attemptsLeft > 0) {
-          throw new AppError(
-            `Mật khẩu không đúng. Còn ${attemptsLeft} lần thử.`, 
-            401, 
-            ERROR_CODES.AUTH_INVALID_CREDENTIALS
-          );
-        } else {
-          await User.findByIdAndUpdate(user._id, {
-            $set: { 
-              lockUntil: new Date(Date.now() + 2 * 60 * 60 * 1000),
-              status: 'LOCKED'
-            }
-          });
-          
-          throw new AppError(
-            'Tài khoản đã bị khóa do đăng nhập sai nhiều lần. Vui lòng thử lại sau 2 giờ.',
-            423,
-            ERROR_CODES.AUTH_ACCOUNT_LOCKED
-          );
-        }
-      }
-
-      // 🎯 RESET LOGIN ATTEMPTS SAU KHI ĐĂNG NHẬP THÀNH CÔNG
-      await User.findByIdAndUpdate(user._id, {
-        $set: { 
-          loginAttempts: 0,
-          lockUntil: null,
-          status: 'ACTIVE'
-        },
-        $currentDate: { 
-          lastLogin: true 
-        }
-      });
-
-      // 🎯 TẠO TOKENS
-      const tokens = generateTokenPair(user);
-
-      // 🎯 TẠO SESSION MỚI
-      const session = await this.createSession(user._id, ipAddress, userAgent, tokens.refreshToken);
-
-      // 🎯 LOG HOẠT ĐỘNG ĐĂNG NHẬP THÀNH CÔNG (ASYNC, KHÔ NG BLOCK)
-      AuditLog.logAction({
-        action: 'LOGIN',
-        userId: user._id,
-        userRole: user.role,
-        userEmail: user.email,
-        userName: `${user.personalInfo.firstName} ${user.personalInfo.lastName}`,
-        ipAddress,
-        userAgent,
-        resource: 'User',
-        resourceId: user._id,
-        success: true,
-        category: 'AUTHENTICATION',
-        metadata: { sessionId: session._id }
-      }).catch(err => {
-        console.warn('⚠️ Failed to log login action:', err.message);
-      });
-
-      console.log(`✅ User logged in successfully: ${user.email}`);
-
-      return {
-        user: this.sanitizeUser(user),
-        tokens,
-        sessionId: session._id
-      };
-
-    } catch (error) {
-      console.error('❌ Login error:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * 🎯 ĐĂNG XUẤT - HOÀN THIỆN
-   */
-  async logout(userId, refreshToken = null, sessionId = null) {
+  await user.save();
+  
+  // 🏥 AUTO-CREATE PATIENT RECORD FOR PATIENT ROLE
+  if (user.role === ROLES.PATIENT) {
     try {
-      // 🎯 NẾU CÓ SESSION ID, ĐÓNG SESSION ĐÓ
-      if (sessionId) {
-        await this.revokeSession(sessionId);
-      } 
-      // 🎯 NẾU CÓ REFRESH TOKEN, TÌM VÀ ĐÓNG SESSION
-      else if (refreshToken) {
-        await Session.findOneAndUpdate(
-          { userId, refreshToken, isActive: true },
-          { 
-            isActive: false,
-            logoutAt: new Date()
-          }
-        );
-      }
-      // 🎯 NẾU KHÔNG CÓ THÔNG TIN, ĐÓNG TẤT CẢ SESSION CỦA USER
-      else if (userId) {
-        await Session.updateMany(
-          { userId, isActive: true },
-          { 
-            isActive: false,
-            logoutAt: new Date()
-          }
-        );
-      }
-
-      // 🎯 LOG HOẠT ĐỘNG ĐĂNG XUẤT (ASYNC, KHÔNG BLOCK)
-      AuditLog.logAction({
-        action: 'LOGOUT',
-        userId,
-        resource: 'User',
-        resourceId: userId,
-        success: true,
-        category: 'AUTHENTICATION',
-        metadata: { sessionId, logoutType: refreshToken ? 'TOKEN_LOGOUT' : 'FULL_LOGOUT' }
-      }).catch(err => {
-        console.warn('⚠️ Failed to log logout action:', err.message);
-      });
-
-      console.log(`✅ User logged out: ${userId}`);
-      return { message: 'Đăng xuất thành công' };
-    } catch (error) {
-      console.error('❌ Logout error:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * 🎯 REFRESH TOKEN - HOÀN THIỆN
-   */
-  async refreshToken(refreshToken) {
-    try {
-      const payload = verifyRefreshToken(refreshToken);
-      
-      const user = await User.findById(payload.sub);
-      if (!user || (user.status && user.status !== 'ACTIVE')) {
-        throw new AppError('Token không hợp lệ', 401, ERROR_CODES.AUTH_INVALID_TOKEN);
-      }
-
-      // 🎯 KIỂM TRA SESSION CÓ TỒN TẠI VÀ ACTIVE
-      const session = await Session.findOne({
-        userId: user._id,
-        refreshToken,
-        isActive: true
-      });
-
-      if (!session) {
-        throw new AppError('Session không tồn tại hoặc đã bị thu hồi', 401, ERROR_CODES.AUTH_INVALID_TOKEN);
-      }
-
-      const accessToken = signAccessToken(user);
-
-      await AuditLog.logAction({
-        action: 'TOKEN_REFRESH',
-        userId: user._id,
-        userRole: user.role,
-        userEmail: user.email,
-        resource: 'User',
-        resourceId: user._id,
-        success: true,
-        category: 'AUTHENTICATION',
-        metadata: { sessionId: session._id }
-      });
-
-      return {
-        accessToken,
-        expiresIn: 15 * 60 // 15 phút
-      };
-
-    } catch (error) {
-      console.error('❌ Refresh token error:', error.message);
-      throw new AppError('Refresh token không hợp lệ', 401, ERROR_CODES.AUTH_INVALID_TOKEN);
-    }
-  }
-
-  /**
-   * 🎯 ĐĂNG KÝ USER - HOÀN THIỆN
-   */
-  async registerUser(userData, ipAddress = '0.0.0.0') {
-    try {
-      const { email, password, personalInfo, role = 'PATIENT' } = userData;
-
-      console.log('👤 [AUTH SERVICE] Starting user registration:', { email });
-
-      // 🎯 KIỂM TRA EMAIL ĐÃ TỒN TẠI
-      const existingUser = await User.findOne({ email: email.toLowerCase() });
-      if (existingUser) {
-        throw new AppError('Email đã được sử dụng', 409, ERROR_CODES.DUPLICATE_ENTRY);
-      }
-
-      // 🎯 KIỂM TRA ĐỘ MẠNH MẬT KHẨU
-      const passwordValidation = validatePasswordStrength(password);
-      if (!passwordValidation.isValid) {
-        throw new AppError(
-          `Mật khẩu không đủ mạnh: ${passwordValidation.errors.join(', ')}`,
-          422,
-          ERROR_CODES.VALIDATION_FAILED
-        );
-      }
-
-      // 🎯 TẠO USER MỚI
-      const user = new User({
-        email: email.toLowerCase(),
-        password: password,
-        role,
-        personalInfo,
-        status: role === 'PATIENT' ? 'ACTIVE' : 'PENDING_APPROVAL'
-      });
-
-      await user.save();
-      console.log('✅ User saved successfully');
-
-      // 🎯 NẾU LÀ PATIENT, TẠO HỒ SƠ BỆNH NHÂN
-      if (role === 'PATIENT') {
-        await this.createPatientProfile(user);
-      }
-
-      // 🎯 GỬI EMAIL CHÀO MỪNG
-      if (process.env.SEND_WELCOME_EMAIL === 'true') {
-        try {
-          await emailService.sendWelcomeEmail(user);
-          console.log('✅ Welcome email sent successfully');
-        } catch (emailError) {
-          console.error('❌ Welcome email failed, but user was created:', emailError.message);
-        }
-      }
-
-      // 🎯 LOG HOẠT ĐỘNG ĐĂNG KÝ
-      await AuditLog.logAction({
-        action: 'USER_CREATE',
-        userId: user._id,
-        userRole: user.role,
-        userEmail: user.email,
-        userName: `${user.personalInfo.firstName} ${user.personalInfo.lastName}`,
-        ipAddress: ipAddress,
-        resource: 'User',
-        resourceId: user._id,
-        success: true,
-        category: 'USER_MANAGEMENT',
-        metadata: { registrationType: 'SELF_REGISTER' }
-      });
-
-      console.log(`✅ User registered: ${user.email}`);
-
-      // 🎯 AUTO-LOGIN SAU KHI ĐĂNG KÝ
-      const tokens = generateTokenPair(user);
-      
-      return {
-        user: this.sanitizeUser(user),
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-        message: role === 'PATIENT' 
-          ? 'Đăng ký thành công. Bạn có thể đăng nhập ngay.' 
-          : 'Đăng ký thành công. Tài khoản đang chờ phê duyệt.'
-      };
-
-    } catch (error) {
-      console.error('❌ Registration error:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * 🎯 QUÊN MẬT KHẨU - HOÀN THIỆN
-   */
-  async forgotPassword(email) {
-    try {
-      console.log('🔑 [AUTH SERVICE] Forgot password request:', { email });
-
-      // 🎯 TÌM USER
-      const user = await User.findOne({ email: email.toLowerCase() });
-      if (!user) {
-        // 🎯 KHÔNG TIẾT LỘ EMAIL CÓ TỒN TẠI HAY KHÔNG
-        console.log(`🔒 Password reset requested for non-existent email: ${email}`);
-        return { 
-          message: 'Nếu email tồn tại, hướng dẫn đặt lại mật khẩu sẽ được gửi đến email của bạn' 
-        };
-      }
-
-      // 🎯 KIỂM TRA TRẠNG THÁI TÀI KHOẢN
-      if (user.status !== 'ACTIVE') {
-        throw new AppError(this.getAccountStatusMessage(user.status), 403, ERROR_CODES.AUTH_ACCOUNT_LOCKED);
-      }
-
-      // 🎯 TẠO RESET TOKEN
-      const resetToken = randomTokenHex(32);
-      const resetTokenExpiry = new Date(Date.now() + 1 * 60 * 60 * 1000); // 1 giờ
-
-      // 🎯 LƯU TOKEN
-      user.resetPasswordToken = resetToken;
-      user.resetPasswordExpires = resetTokenExpiry;
-      await user.save();
-
-      // 🎯 GỬI EMAIL ĐẶT LẠI MẬT KHẨU
-      try {
-        await emailService.sendPasswordResetEmail(user, resetToken);
-        console.log(`✅ Password reset email sent to: ${user.email}`);
-      } catch (emailError) {
-        console.error('❌ Password reset email failed:', emailError.message);
-      }
-
-      // 🎯 LOG HOẠT ĐỘNG
-      await AuditLog.logAction({
-        action: 'PASSWORD_RESET_REQUEST',
-        userId: user._id,
-        userRole: user.role,
-        userEmail: user.email,
-        resource: 'User',
-        resourceId: user._id,
-        success: true,
-        category: 'AUTHENTICATION'
-      });
-
-      return { 
-        message: 'Hướng dẫn đặt lại mật khẩu đã được gửi đến email của bạn' 
-      };
-
-    } catch (error) {
-      console.error('❌ Forgot password error:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * 🎯 ĐẶT LẠI MẬT KHẨU - HOÀN THIỆN
-   */
-  async resetPassword(token, newPassword) {
-    try {
-      console.log('🔑 [AUTH SERVICE] Reset password attempt with token');
-
-      // 🎯 TÌM USER THEO TOKEN
-      const user = await User.findOne({
-        resetPasswordToken: token,
-        resetPasswordExpires: { $gt: new Date() }
-      });
-
-      if (!user) {
-        throw new AppError('Token đặt lại mật khẩu không hợp lệ hoặc đã hết hạn', 400, ERROR_CODES.AUTH_INVALID_TOKEN);
-      }
-
-      // 🎯 KIỂM TRA ĐỘ MẠNH MẬT KHẨU
-      const passwordValidation = validatePasswordStrength(newPassword);
-      if (!passwordValidation.isValid) {
-        throw new AppError(
-          `Mật khẩu không đủ mạnh: ${passwordValidation.errors.join(', ')}`,
-          422,
-          ERROR_CODES.VALIDATION_FAILED
-        );
-      }
-
-      // 🎯 MÃ HÓA MẬT KHẨU MỚI
-      const hashedPassword = await hashPassword(newPassword);
-
-      // 🎯 CẬP NHẬT MẬT KHẨU VÀ XÓA TOKEN
-      user.password = hashedPassword;
-      user.resetPasswordToken = undefined;
-      user.resetPasswordExpires = undefined;
-      user.loginAttempts = 0;
-      user.lockUntil = undefined;
-      user.status = 'ACTIVE';
-      await user.save();
-
-      // 🎯 ĐÓNG TẤT CẢ SESSION CŨ (FORCE LOGOUT)
-      await Session.updateMany(
-        { userId: user._id, isActive: true },
-        { 
-          isActive: false,
-          logoutAt: new Date(),
-          logoutReason: 'PASSWORD_RESET'
-        }
-      );
-
-      // 🎯 GỬI EMAIL THÔNG BÁO
-      try {
-        await emailService.sendPasswordChangedConfirmation(user);
-        console.log(`✅ Password changed confirmation sent to: ${user.email}`);
-      } catch (emailError) {
-        console.error('❌ Password changed email failed:', emailError.message);
-      }
-
-      // 🎯 LOG HOẠT ĐỘNG
-      await AuditLog.logAction({
-        action: 'PASSWORD_RESET_SUCCESS',
-        userId: user._id,
-        userRole: user.role,
-        userEmail: user.email,
-        resource: 'User',
-        resourceId: user._id,
-        success: true,
-        category: 'AUTHENTICATION'
-      });
-
-      console.log(`✅ Password reset successful for: ${user.email}`);
-
-      return { message: 'Đặt lại mật khẩu thành công' };
-
-    } catch (error) {
-      console.error('❌ Reset password error:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * 🎯 ĐỔI MẬT KHẨU - HOÀN THIỆN
-   */
-  async changePassword(userId, currentPassword, newPassword) {
-    try {
-      const user = await User.findById(userId);
-      if (!user) {
-        throw new AppError('Người dùng không tồn tại', 404, ERROR_CODES.AUTH_INVALID_TOKEN);
-      }
-
-      // 🎯 XÁC THỰC MẬT KHẨU HIỆN TẠI
-      const isCurrentPasswordValid = await comparePassword(currentPassword, user.password);
-      if (!isCurrentPasswordValid) {
-        await AuditLog.logAction({
-          action: 'PASSWORD_CHANGE_FAILED',
-          userId: user._id,
-          userRole: user.role,
-          userEmail: user.email,
-          resource: 'User',
-          resourceId: user._id,
-          success: false,
-          category: 'AUTHENTICATION',
-          errorMessage: 'Mật khẩu hiện tại không đúng'
-        });
-
-        throw new AppError('Mật khẩu hiện tại không đúng', 401, ERROR_CODES.AUTH_INVALID_CREDENTIALS);
-      }
-
-      // 🎯 KIỂM TRA MẬT KHẨU MỚI KHÁC MẬT KHẨU CŨ
-      const isSamePassword = await comparePassword(newPassword, user.password);
-      if (isSamePassword) {
-        throw new AppError('Mật khẩu mới phải khác mật khẩu hiện tại', 422, ERROR_CODES.VALIDATION_FAILED);
-      }
-
-      // 🎯 KIỂM TRA ĐỘ MẠNH MẬT KHẨU
-      const passwordValidation = validatePasswordStrength(newPassword);
-      if (!passwordValidation.isValid) {
-        throw new AppError(
-          `Mật khẩu không đủ mạnh: ${passwordValidation.errors.join(', ')}`,
-          422,
-          ERROR_CODES.VALIDATION_FAILED
-        );
-      }
-
-      // 🎯 CẬP NHẬT MẬT KHẨU
-      user.password = await hashPassword(newPassword);
-      await user.save();
-
-      // 🎯 ĐÓNG TẤT CẢ SESSION CŨ (FORCE LOGOUT)
-      await Session.updateMany(
-        { userId: user._id, isActive: true },
-        { 
-          isActive: false,
-          logoutAt: new Date(),
-          logoutReason: 'PASSWORD_CHANGE'
-        }
-      );
-
-      // 🎯 GỬI EMAIL THÔNG BÁO
-      try {
-        await emailService.sendPasswordChangedConfirmation(user);
-        console.log(`✅ Password changed confirmation sent to: ${user.email}`);
-      } catch (emailError) {
-        console.error('❌ Password changed email failed:', emailError.message);
-      }
-
-      // 🎯 LOG HOẠT ĐỘNG
-      await AuditLog.logAction({
-        action: 'PASSWORD_CHANGE_SUCCESS',
-        userId: user._id,
-        userRole: user.role,
-        userEmail: user.email,
-        resource: 'User',
-        resourceId: user._id,
-        success: true,
-        category: 'AUTHENTICATION'
-      });
-
-      console.log(`✅ Password changed successfully for: ${user.email}`);
-
-      return { message: 'Đổi mật khẩu thành công' };
-
-    } catch (error) {
-      console.error('❌ Change password error:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * 🎯 LẤY THÔNG TIN USER HIỆN TẠI - HOÀN THIỆN
-   */
-  async getCurrentUser(userId) {
-    try {
-      const user = await User.findById(userId)
-        .select('-password -resetPasswordToken -resetPasswordExpires -loginAttempts -lockUntil')
-        .lean();
-
-      if (!user) {
-        throw new AppError('Người dùng không tồn tại', 404, ERROR_CODES.AUTH_INVALID_TOKEN);
-      }
-
-      return this.sanitizeUser(user);
-
-    } catch (error) {
-      console.error('❌ Get current user error:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * 🎯 LẤY TẤT CẢ SESSION CỦA USER - HÀM MỚI
-   */
-  async getUserSessions(userId) {
-    try {
-      const sessions = await Session.find({ userId })
-        .sort({ loginAt: -1 })
-        .lean();
-
-      return sessions.map(session => ({
-        sessionId: session._id,
-        ipAddress: session.ipAddress,
-        userAgent: session.userAgent,
-        loginAt: session.loginAt,
-        logoutAt: session.logoutAt,
-        isActive: session.isActive,
-        lastActivity: session.lastActivity,
-        logoutReason: session.logoutReason
-      }));
-
-    } catch (error) {
-      console.error('❌ Get user sessions error:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * 🎯 THU HỒI SESSION - HÀM MỚI
-   */
-  async revokeSession(sessionId) {
-    try {
-      const session = await Session.findById(sessionId);
-      
-      if (!session) {
-        throw new AppError('Session không tồn tại', 404);
-      }
-
-      if (!session.isActive) {
-        throw new AppError('Session đã bị thu hồi trước đó', 400);
-      }
-
-      session.isActive = false;
-      session.logoutAt = new Date();
-      session.logoutReason = 'MANUALLY_REVOKED';
-      await session.save();
-
-      // 🎯 LOG HOẠT ĐỘNG
-      await AuditLog.logAction({
-        action: 'SESSION_REVOKED',
-        userId: session.userId,
-        resource: 'Session',
-        resourceId: session._id,
-        success: true,
-        category: 'AUTHENTICATION',
-        metadata: { sessionId: session._id }
-      });
-
-      console.log(`✅ Session revoked: ${sessionId}`);
-
-      return { message: 'Session đã được thu hồi thành công' };
-
-    } catch (error) {
-      console.error('❌ Revoke session error:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * 🎯 TẠO SESSION MỚI - HÀM HỖ TRỢ
-   */
-  async createSession(userId, ipAddress, userAgent, refreshToken) {
-    try {
-      const session = new Session({
-        userId,
-        ipAddress,
-        userAgent,
-        refreshToken,
-        loginAt: new Date(),
-        lastActivity: new Date(),
-        isActive: true
-      });
-
-      await session.save();
-      return session;
-    } catch (error) {
-      console.error('❌ Create session error:', error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * 🎯 TẠO HỒ SƠ BỆNH NHÂN
-   */
-  async createPatientProfile(user) {
-    try {
-      const patientId = `PAT${Date.now().toString().slice(-8)}`;
-      
-      const patient = new Patient({
+      const patientId = `PAT-${user._id.toString().toUpperCase().slice(-8)}-${Date.now()}`;
+      await Patient.create({
         userId: user._id,
         patientId,
-        bloodType: 'UNKNOWN',
-        allergies: [],
-        chronicConditions: []
+        bloodType: 'UNKNOWN'
       });
+      console.log(`🏥 Patient record created for user ${user._id}`);
+    } catch (err) {
+      console.error('❌ Error creating patient record:', err.message);
+      // Don't throw - user is already created, we'll create patient record on first access
+    }
+  }
+  
+  // Ghi audit log
+  await log(
+    creatorId || user._id,
+    creatorId ? 'REGISTER_USER' : 'SELF_REGISTER',
+    { 
+      targetUserId: user._id.toString(), 
+      ip, 
+      userAgent,
+      email,
+      role: user.role
+    }
+  );
+  
+  return user;
+}
 
-      await patient.save();
-      console.log(`✅ Patient profile created: ${patientId}`);
+/**
+ * ĐĂNG NHẬP HỆ THỐNG
+ * 
+ * @param {Object} credentials - Thông tin đăng nhập
+ * @returns {Promise<Object>} Kết quả đăng nhập
+ */
+async function login({ email, password, ip, userAgent, twoFACode }) {
+  console.log(`🔐 [LOGIN SERVICE] Attempting login for email: ${email}`);
+  
+  const user = await User.findOne({ email });
+  
+  console.log(`🔍 [LOGIN SERVICE] User found:`, user ? `Yes (${user._id})` : 'No');
+  
+  if (!user) {
+    await log(null, 'LOGIN_FAILED', { email, ip, userAgent });
+    throw new Error('Thông tin đăng nhập không chính xác');
+  }
 
-    } catch (error) {
-      console.error('❌ Create patient profile error:', error.message);
+  if (user.isLocked) {
+    await log(user._id, 'LOGIN_LOCKED', { ip, userAgent });
+    throw new Error('Tài khoản đã bị khóa do đăng nhập sai nhiều lần');
+  }
+
+  // 🔐 DEV MODE: Allow PENDING_VERIFICATION in development
+  if (process.env.NODE_ENV === 'production' && user.status !== 'ACTIVE') {
+    await log(user._id, 'LOGIN_INACTIVE', { ip, userAgent });
+    throw new Error('Tài khoản không hoạt động');
+  }
+
+  const ok = await comparePassword(password, user.passwordHash);
+  console.log(`🔐 [LOGIN SERVICE] Password comparison:`, ok ? 'MATCH ✅' : 'NO MATCH ❌');
+  
+  if (!ok) {
+    user.failedLoginAttempts += 1;
+    
+    if (user.failedLoginAttempts >= (process.env.MAX_LOGIN_ATTEMPTS || 5)) {
+      user.lockUntil = new Date(Date.now() + (parseInt(process.env.LOCK_TIME_MS) || 15 * 60 * 1000));
+      await log(user._id, 'ACCOUNT_LOCKED', { ip, userAgent });
+    }
+    
+    await user.save();
+    await log(user._id, 'LOGIN_FAILED', { ip, userAgent });
+    throw new Error('Thông tin đăng nhập không chính xác');
+  }
+
+  // Xác thực 2FA
+  if (user.twoFA && user.twoFA.enabled) {
+    if (!twoFACode) {
+      throw new Error('Yêu cầu mã xác thực 2 yếu tố');
+    }
+
+    const verified = speakeasy.totp.verify({
+      secret: user.twoFA.secret,
+      encoding: 'base32',
+      token: twoFACode,
+      window: 1,
+    });
+
+    if (!verified) {
+      await log(user._id, 'LOGIN_2FA_FAILED', { ip, userAgent });
+      throw new Error('Mã xác thực 2 yếu tố không hợp lệ');
     }
   }
 
-  /**
-   * 🎯 LOG FAILED LOGIN ATTEMPT
-   */
-  async logFailedLoginAttempt(email, ipAddress, reason) {
-    try {
-      await AuditLog.logAction({
-        action: 'LOGIN_FAILED',
-        userEmail: email,
-        ipAddress,
-        resource: 'User',
-        success: false,
-        category: 'AUTHENTICATION',
-        metadata: { reason }
+  // Reset trạng thái đăng nhập
+  user.failedLoginAttempts = 0;
+  user.lockUntil = null;
+  user.lastLogin = { ip, userAgent, at: new Date() };
+  await user.save();
+
+  // Tạo tokens với permissions
+  const payload = { 
+    sub: user._id, 
+    email: user.email, 
+    role: user.role, 
+    permissions: ROLE_PERMISSIONS[user.role] || [],
+    canCreate: user.canCreate || []
+  };
+  
+  const accessToken = signAccessToken(payload);
+  const refreshRaw = await createRefreshToken(user._id, { ip, device: userAgent });
+
+  await log(user._id, 'LOGIN_SUCCESS', { ip, userAgent });
+  
+  return { 
+    user: {
+      _id: user._id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      canCreate: user.canCreate,
+    }, 
+    accessToken, 
+    refreshToken: refreshRaw 
+  };
+}
+
+/**
+ * ĐĂNG XUẤT HỆ THỐNG
+ * 
+ * @param {string} userId - ID người dùng
+ * @param {string} refreshTokenRaw - Refresh token cần thu hồi
+ */
+async function logout(userId, refreshTokenRaw) {
+  try {
+    // 🗑️ THU HỒI REFRESH TOKEN
+    if (refreshTokenRaw) {
+      const hash = sha256(refreshTokenRaw);
+      await RefreshToken.updateOne({ 
+        user: userId, 
+        tokenHash: hash 
+      }, { 
+        revoked: true 
       });
-    } catch (error) {
-      console.error('❌ Failed to log failed login attempt:', error.message);
     }
-  }
-
-  /**
-   * 🎯 SANITIZE USER DATA
-   */
-  sanitizeUser(user) {
-    const sanitized = { ...user };
     
-    delete sanitized.password;
-    delete sanitized.resetPasswordToken;
-    delete sanitized.resetPasswordExpires;
-    delete sanitized.loginAttempts;
-    delete sanitized.lockUntil;
-
-    return sanitized;
-  }
-
-  /**
-   * 🎯 THÔNG BÁO TRẠNG THÁI TÀI KHOẢN (hỗ trợ cả Web và App backend)
-   */
-  getAccountStatusMessage(status) {
-    const messages = {
-      'ACTIVE': 'Tài khoản đang hoạt động',
-      'INACTIVE': 'Tài khoản chưa được kích hoạt',
-      'SUSPENDED': 'Tài khoản đã bị tạm ngưng',
-      'LOCKED': 'Tài khoản đã bị khóa',
-      'PENDING_APPROVAL': 'Tài khoản đang chờ phê duyệt',
-      'PENDING_VERIFICATION': 'Tài khoản đang chờ xác thực email',
-      'DEACTIVATED': 'Tài khoản đã bị vô hiệu hóa',
-    };
-    
-    return messages[status] || 'Tài khoản không hoạt động';
+    // 📊 GHI AUDIT LOG
+    await log(userId, 'LOGOUT', {});
+  } catch (err) {
+    console.error('❌ Lỗi đăng xuất:', err);
+    // Không throw error để không ảnh hưởng user experience
   }
 }
 
-module.exports = new AuthService();
+/**
+ * LÀM MỚI ACCESS TOKEN BẰNG REFRESH TOKEN
+ * 
+ * @param {string} refreshTokenRaw - Refresh token hiện tại
+ * @param {string} ip - Địa chỉ IP
+ * @param {string} device - Thông tin thiết bị
+ * @returns {Promise<Object>} Tokens mới
+ */
+async function refreshTokens(refreshTokenRaw, ip, device) {
+  const hash = sha256(refreshTokenRaw);
+  const tokenRec = await RefreshToken.findOne({ tokenHash: hash });
+
+  // 🔒 KIỂM TRA TOKEN HỢP LỆ
+  if (!tokenRec || tokenRec.revoked || tokenRec.expiresAt < new Date()) {
+    // VÔ HIỆU HÓA TẤT CẢ TOKEN NẾU PHÁT HIỆN BẤT THƯỜNG
+    if (tokenRec) {
+      await RefreshToken.updateMany({ user: tokenRec.user }, { revoked: true });
+    }
+    throw new Error('Refresh token không hợp lệ');
+  }
+
+  // 🔍 TÌM USER TƯƠNG ỨNG
+  const user = await User.findById(tokenRec.user);
+  if (!user) {
+    throw new Error('Không tìm thấy người dùng');
+  }
+
+  // 🔄 XOAY VÒNG TOKEN
+  const newRaw = await rotateRefreshToken(refreshTokenRaw, user._id, { ip, device });
+  
+  // 🎫 TẠO ACCESS TOKEN MỚI
+  const payload = { 
+    sub: user._id, 
+    email: user.email, 
+    role: user.role, 
+    permissions: user.canCreate || [] 
+  };
+  const accessToken = signAccessToken(payload);
+
+  // 📊 GHI AUDIT LOG
+  await log(user._id, 'REFRESH_TOKEN', { ip, userAgent: device });
+  
+  return { 
+    accessToken, 
+    refreshToken: newRaw 
+  };
+}
+
+/**
+ * SINH SECRET KEY CHO XÁC THỰC 2 YẾU TỐ
+ * 
+ * @returns {Object} Secret information
+ */
+function generate2FASecret() {
+  const secret = speakeasy.generateSecret({ 
+    length: 20,
+    name: `MediAuth (${process.env.APP_NAME || 'System'})` // Tên app trong authenticator
+  });
+  
+  return { 
+    otpauth_url: secret.otpauth_url, 
+    base32: secret.base32 
+  };
+}
+
+/**
+ * KÍCH HOẠT XÁC THỰC 2 YẾU TỐ CHO USER
+ * 
+ * @param {string} userId - ID người dùng
+ * @param {string} base32Secret - Secret key base32
+ * @returns {Promise<Object>} User object
+ */
+async function enable2FAForUser(userId, base32Secret) {
+  const user = await User.findById(userId);
+  user.twoFA = { 
+    enabled: true, 
+    secret: base32Secret 
+  };
+  await user.save();
+  
+  await log(userId, 'ENABLE_2FA');
+  return user;
+}
+
+/**
+ * VÔ HIỆU HÓA XÁC THỰC 2 YẾU TỐ
+ * 
+ * @param {string} userId - ID người dùng
+ * @returns {Promise<Object>} User object
+ */
+async function disable2FAForUser(userId) {
+  const user = await User.findById(userId);
+  user.twoFA = { 
+    enabled: false, 
+    secret: null  // Xóa secret để bảo mật
+  };
+  await user.save();
+  
+  await log(userId, 'DISABLE_2FA');
+  return user;
+}
+
+/**
+ * XÁC THỰC EMAIL VÀ KÍCH HOẠT TÀI KHOẢN
+ * - Cho phép người dùng tự kích hoạt tài khoản sau khi đăng ký
+ * 
+ * @param {string} email - Email người dùng
+ * @returns {Promise<Object>} User object
+ */
+async function verifyEmailAndActivate(email) {
+  const user = await User.findOne({ email });
+  
+  if (!user) {
+    throw new Error('Không tìm thấy người dùng với email này');
+  }
+
+  if (user.status === 'ACTIVE') {
+    throw new Error('Tài khoản đã được kích hoạt trước đó');
+  }
+
+  // Kích hoạt tài khoản
+  user.status = 'ACTIVE';
+  user.emailVerifiedAt = new Date();
+  await user.save();
+
+  await log(user._id, 'EMAIL_VERIFIED', { email });
+
+  return user;
+}
+
+module.exports = {
+  registerUser,
+  login,
+  logout,
+  refreshTokens,
+  createRefreshToken,
+  rotateRefreshToken,
+  generate2FASecret,
+  enable2FAForUser,
+  disable2FAForUser,
+  verifyEmailAndActivate,
+};
