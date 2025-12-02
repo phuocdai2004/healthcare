@@ -137,6 +137,7 @@ router.post(
   '/:appointmentId/payment/confirm',
   requireRole(ROLES.RECEPTIONIST, ROLES.HOSPITAL_ADMIN, ROLES.SUPER_ADMIN),
   requirePermission(PERMISSIONS.APPOINTMENT_UPDATE),
+  validateBody(appointmentValidation.confirmPayment),
   appointmentController.confirmPayment
 );
 

@@ -104,7 +104,13 @@ const appointmentValidation = {
   getDoctorSchedule: Joi.object({
     date: Joi.date().iso().optional(),
     week: Joi.date().iso().optional()
+  }),
+
+  // 💰 XÁC NHẬN THANH TOÁN
+  confirmPayment: Joi.object({
+    amount: Joi.number().positive().optional().default(5000),
+    method: Joi.string().valid('BANK_TRANSFER', 'CASH', 'CARD', 'INSURANCE', 'ONLINE').optional().default('BANK_TRANSFER'),
+    transactionId: Joi.string().optional(),
+    notes: Joi.string().max(500).optional()
   })
 };
-
-module.exports = appointmentValidation;
