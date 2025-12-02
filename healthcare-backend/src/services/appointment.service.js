@@ -2,6 +2,7 @@ const Appointment = require('../models/appointment.model');
 const User = require('../models/user.model');
 const { AppError, ERROR_CODES } = require('../middlewares/error.middleware');
 const { generateMedicalCode } = require('../utils/healthcare.utils');
+const notificationEmailService = require('./notificationEmail.service');
 
 /**
  * 📅 APPOINTMENT SERVICE - BUSINESS LOGIC
@@ -70,6 +71,21 @@ class AppointmentService {
         .populate('patientId', 'name email phone dateOfBirth gender')
         .populate('doctorId', 'name email phone specialization')
         .populate('createdBy', 'name email');
+
+      // 🎯 GỬI EMAIL THÔNG BÁO
+      try {
+        await notificationEmailService.sendAppointmentConfirmation({
+          patientName: patient.name,
+          patientEmail: patient.email,
+          doctorName: doctor.name,
+          appointmentDate: appointmentData.appointmentDate,
+          appointmentId: appointmentId,
+          clinic: appointmentData.clinic || 'Phòng khám'
+        });
+      } catch (emailError) {
+        console.warn('⚠️ [SERVICE] Failed to send appointment confirmation email:', emailError.message);
+        // Không throw error, để việc tạo appointment vẫn thành công
+      }
 
       console.log('✅ [SERVICE] Appointment created successfully:', appointmentId);
       return result;

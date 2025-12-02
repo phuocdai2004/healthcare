@@ -3,6 +3,7 @@ const Bill = require('../models/bill.model');
 const Appointment = require('../models/appointment.model');
 const { AppError } = require('../middlewares/error.middleware');
 const { generateMedicalCode } = require('../utils/healthcare.utils');
+const notificationEmailService = require('./notificationEmail.service');
 
 class BillingService {
   /**
@@ -96,7 +97,7 @@ class BillingService {
 
   async processPayment(billId, paymentData) {
     try {
-      const bill = await Bill.findById(billId);
+      const bill = await Bill.findById(billId).populate('patientId');
       
       if (!bill) {
         throw new AppError('Không tìm thấy hóa đơn', 404);
@@ -124,6 +125,22 @@ class BillingService {
       }
 
       await bill.save();
+      
+      // 🎯 GỬI EMAIL THÔNG BÁO THANH TOÁN
+      try {
+        await notificationEmailService.sendPaymentConfirmation({
+          patientName: bill.patientId.name,
+          patientEmail: bill.patientId.email,
+          billId: bill.billId,
+          amount: payment.amount,
+          method: payment.method,
+          transactionId: payment.paymentId,
+          date: new Date()
+        });
+      } catch (emailError) {
+        console.warn('⚠️ [SERVICE] Failed to send payment confirmation email:', emailError.message);
+        // Không throw error, để thanh toán vẫn thành công
+      }
       
       return bill.populate('patientId');
     } catch (error) {

@@ -19,6 +19,9 @@ const billingRoutes = require('./src/routes/billing.routes');
 const consultationRoutes = require('./src/routes/consultation.routes');
 const superAdminRoutes = require('./src/routes/superAdmin.routes');
 const webhookRoutes = require('./src/routes/webhook.routes');
+const doctorScheduleRoutes = require('./src/routes/doctorSchedule.routes');
+const clinicRoutes = require('./src/routes/clinic.routes');
+const feedbackRoutes = require('./src/routes/feedback.routes');
 
 /**
  * ỨNG DỤNG EXPRESS CHÍNH
@@ -114,6 +117,9 @@ app.use('/api/billing', billingRoutes);
 app.use('/api/consultation', consultationRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/webhook', webhookRoutes); // 🔔 Webhook cho thanh toán tự động
+app.use('/api/doctor-schedule', doctorScheduleRoutes); // 📅 Lịch làm việc bác sĩ
+app.use('/api/clinic', clinicRoutes); // 🏥 Quản lý phòng khám
+app.use('/api/feedback', feedbackRoutes); // ⭐ Đánh giá dịch vụ
 
 // 🔍 DEBUG ENDPOINT (chỉ trong development)
 if (appConfig.isDev) {
