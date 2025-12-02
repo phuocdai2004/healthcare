@@ -131,6 +131,72 @@ const appointmentSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+
+  // ============ DOCTOR CONSULTATION & COMPLETION ============
+  // Bác sĩ chấp nhận/từ chối lịch
+  doctorAcceptance: {
+    accepted: { type: Boolean, default: null }, // null = chưa quyết định, true = chấp nhận, false = từ chối
+    acceptedAt: Date,
+    rejectionReason: String
+  },
+
+  // Ghi chú tư vấn khi khám
+  consultation: {
+    chiefComplaint: String,              // Shikayat utama
+    historyOfPresentIllness: String,     // Lịch sử bệnh hiện tại
+    physicalExamination: String,         // Khám lâm sàng
+    diagnosis: String,                   // Chẩn đoán
+    assessmentNotes: String,             // Ghi chú đánh giá
+    treatmentPlan: String                // Kế hoạch điều trị
+  },
+
+  // Đơn thuốc
+  prescriptions: [{
+    medicationId: mongoose.Schema.Types.ObjectId,
+    medicationName: String,
+    dosage: String,                      // e.g., "500mg"
+    frequency: String,                   // e.g., "3 times daily"
+    duration: String,                    // e.g., "7 days"
+    instructions: String,
+    quantity: Number,
+    notes: String
+  }],
+
+  // Hồ sơ bệnh án
+  medicalRecordId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'MedicalRecord'
+  },
+
+  // Kết quả xét nghiệm
+  labOrders: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'LabOrder'
+  }],
+
+  // Hoàn thành khám
+  completion: {
+    completedAt: Date,
+    completedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    outcome: {
+      type: String,
+      enum: ['CURED', 'IMPROVED', 'STABLE', 'WORSENED', 'REFERRED'],
+      default: 'STABLE'
+    },
+    followUpRequired: Boolean,
+    followUpNotes: String,
+    referralDetails: {
+      referredTo: String,                // Bác sĩ/chuyên khoa khác
+      reason: String,
+      urgency: {
+        type: String,
+        enum: ['ROUTINE', 'URGENT', 'EMERGENCY']
+      }
+    }
   }
 }, {
   timestamps: true,
@@ -188,6 +254,57 @@ appointmentSchema.methods.completeAppointment = function() {
     this.waitTime = Math.round(
       (this.actualStartTime - this.appointmentDate) / (1000 * 60)
     ); // minutes
+  }
+};
+
+// Bác sĩ chấp nhận lịch hẹn
+appointmentSchema.methods.acceptAppointment = function(acceptedBy = null) {
+  this.doctorAcceptance.accepted = true;
+  this.doctorAcceptance.acceptedAt = new Date();
+  this.status = 'CONFIRMED';
+};
+
+// Bác sĩ từ chối lịch hẹn
+appointmentSchema.methods.rejectAppointment = function(reason) {
+  this.doctorAcceptance.accepted = false;
+  this.doctorAcceptance.rejectionReason = reason;
+  this.status = 'CANCELLED';
+};
+
+// Hoàn thành khám và lưu thông tin khám
+appointmentSchema.methods.completeConsultation = function(data, doctorId) {
+  this.status = 'IN_PROGRESS';
+  this.actualStartTime = new Date();
+  
+  // Lưu ghi chú tư vấn
+  if (data.consultation) {
+    this.consultation = { ...this.consultation, ...data.consultation };
+  }
+  
+  // Lưu đơn thuốc
+  if (data.prescriptions && Array.isArray(data.prescriptions)) {
+    this.prescriptions = data.prescriptions;
+  }
+};
+
+// Kết thúc khám và cập nhật trạng thái
+appointmentSchema.methods.finishConsultation = function(data, doctorId) {
+  this.status = 'COMPLETED';
+  this.actualEndTime = new Date();
+  
+  // Lưu kết luận
+  if (data.completion) {
+    this.completion = {
+      completedAt: new Date(),
+      completedBy: doctorId,
+      ...data.completion
+    };
+  }
+  
+  if (this.actualStartTime) {
+    this.waitTime = Math.round(
+      (this.actualStartTime - this.appointmentDate) / (1000 * 60)
+    );
   }
 };
 

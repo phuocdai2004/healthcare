@@ -1,5 +1,3 @@
-const { appConfig } = require('../config');
-
 /**
  * 🛡️ MIDDLEWARE XỬ LÝ LỖI TẬP TRUNG
  * - Bắt và xử lý tất cả lỗi trong ứng dụng
@@ -92,7 +90,7 @@ function errorHandler(err, req, res, next) {
       timestamp: error.timestamp,
       
       // 🎯 CHỈ TRẢ VỀ STACK TRACE TRONG MÔI TRƯỜNG DEVELOPMENT
-      ...(appConfig.isDev && { stack: error.stack }),
+      ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
       
       // 🎯 THÔNG TIN BỔ SUNG CHO MỘT SỐ LỖI
       ...(error.details && { details: error.details }),

@@ -23,6 +23,7 @@ const { Option } = Select;
 const PaymentConfirmation = () => {
   const [pendingPayments, setPendingPayments] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [confirmModal, setConfirmModal] = useState({ visible: false, appointment: null });
   const [form] = Form.useForm();
   const [stats, setStats] = useState({ pending: 0, confirmedToday: 0, totalAmount: 0 });
@@ -59,27 +60,31 @@ const PaymentConfirmation = () => {
     fetchPendingPayments();
   }, []);
 
-  // Xử lý xác nhận thanh toán
-  const handleConfirmPayment = async (values) => {
+  // Xử lý xác nhận thanh toán - ĐƠNSGIẢN, không cần form
+  const handleConfirmPayment = async (appointment) => {
     try {
-      const { appointmentId } = confirmModal.appointment;
+      setConfirming(true);
+      const appointmentId = appointment._id || appointment.appointmentId;
       
-      const response = await apiClient.post(`/appointments/${appointmentId}/payment/confirm`, {
-        method: values.method,
-        amount: values.amount,
-        transactionId: values.transactionId,
-        notes: values.notes
-      });
+      console.log('✅ Confirming appointment:', appointmentId);
+      
+      const response = await apiClient.post(`/appointments/simple-confirm/${appointmentId}`);
 
       if (response.data.success) {
-        message.success(`✅ Đã xác nhận thanh toán cho lịch hẹn ${appointmentId}`);
+        message.success(`✅ Đã xác nhận lịch hẹn ${appointment.appointmentId}`);
         setConfirmModal({ visible: false, appointment: null });
         form.resetFields();
-        fetchPendingPayments();
+        
+        // Wait a moment for database to update, then refresh
+        setTimeout(() => {
+          fetchPendingPayments();
+        }, 300);
       }
     } catch (error) {
-      console.error('❌ Lỗi xác nhận thanh toán:', error);
-      message.error(error.response?.data?.message || 'Xác nhận thanh toán thất bại');
+      console.error('❌ Lỗi xác nhận:', error);
+      message.error(error.response?.data?.message || 'Xác nhận thất bại');
+    } finally {
+      setConfirming(false);
     }
   };
 
@@ -269,12 +274,12 @@ const PaymentConfirmation = () => {
         />
       </Card>
 
-      {/* Modal xác nhận */}
+      {/* Modal xác nhận - ĐƠN GIẢN */}
       <Modal
         title={
           <Space>
-            <ExclamationCircleOutlined style={{ color: '#faad14' }} />
-            Xác Nhận Thanh Toán
+            <CheckCircleOutlined style={{ color: '#52c41a' }} />
+            Xác Nhận Lịch Hẹn
           </Space>
         }
         open={confirmModal.visible}
@@ -282,80 +287,61 @@ const PaymentConfirmation = () => {
           setConfirmModal({ visible: false, appointment: null });
           form.resetFields();
         }}
-        footer={null}
-        width={500}
+        footer={[
+          <Button key="cancel" onClick={() => setConfirmModal({ visible: false, appointment: null })} disabled={confirming}>
+            Hủy
+          </Button>,
+          <Button 
+            key="confirm" 
+            type="primary" 
+            icon={<CheckCircleOutlined />}
+            onClick={() => handleConfirmPayment(confirmModal.appointment)}
+            loading={confirming}
+            disabled={confirming}
+          >
+            Xác Nhận
+          </Button>
+        ]}
+        width={400}
       >
         {confirmModal.appointment && (
-          <div style={{ marginBottom: '16px', padding: '12px', background: '#f5f5f5', borderRadius: '8px' }}>
-            <Row gutter={16}>
+          <div style={{ padding: '12px' }}>
+            <Row gutter={16} style={{ marginBottom: '16px' }}>
               <Col span={12}>
                 <Text type="secondary">Mã lịch hẹn:</Text>
                 <div><Text strong>{confirmModal.appointment.appointmentId}</Text></div>
               </Col>
               <Col span={12}>
                 <Text type="secondary">Bệnh nhân:</Text>
-                <div><Text strong>{confirmModal.appointment.patientId?.name}</Text></div>
+                <div><Text strong>{confirmModal.appointment.patientId?.name || 'N/A'}</Text></div>
               </Col>
             </Row>
+
+            <Row gutter={16} style={{ marginBottom: '16px' }}>
+              <Col span={12}>
+                <Text type="secondary">Bác sĩ:</Text>
+                <div><Text strong>{confirmModal.appointment.doctorId?.name || 'N/A'}</Text></div>
+              </Col>
+              <Col span={12}>
+                <Text type="secondary">Ngày hẹn:</Text>
+                <div><Text strong>{dayjs(confirmModal.appointment.appointmentDate).format('DD/MM/YYYY HH:mm')}</Text></div>
+              </Col>
+            </Row>
+
+            <Row>
+              <Col span={24}>
+                <Text type="secondary">Trạng thái:</Text>
+                <div style={{ marginTop: '4px' }}>
+                  <Tag color="orange">CHƯA XÁC NHẬN</Tag>
+                </div>
+              </Col>
+            </Row>
+
+            <div style={{ marginTop: '16px', padding: '12px', background: '#fffbe6', borderRadius: '4px', borderLeft: '3px solid #faad14' }}>
+              <Text>Bạn có chắc chắn muốn xác nhận lịch hẹn này không?</Text>
+            </div>
           </div>
         )}
-
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleConfirmPayment}
-        >
-          <Form.Item
-            name="amount"
-            label="Số tiền (VNĐ)"
-            rules={[{ required: true, message: 'Vui lòng nhập số tiền' }]}
-          >
-            <Input 
-              type="number"
-              prefix={<DollarOutlined />}
-              placeholder="150000"
-            />
-          </Form.Item>
-
-          <Form.Item
-            name="method"
-            label="Phương thức thanh toán"
-            rules={[{ required: true, message: 'Vui lòng chọn phương thức' }]}
-          >
-            <Select>
-              <Option value="BANK_TRANSFER">Chuyển khoản ngân hàng</Option>
-              <Option value="MOMO">Ví MoMo</Option>
-              <Option value="VNPAY">VNPay</Option>
-              <Option value="ZALOPAY">ZaloPay</Option>
-              <Option value="CASH">Tiền mặt</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="transactionId"
-            label="Mã giao dịch (nếu có)"
-          >
-            <Input placeholder="Nhập mã giao dịch từ ngân hàng/ví điện tử" />
-          </Form.Item>
-
-          <Form.Item
-            name="notes"
-            label="Ghi chú"
-          >
-            <Input.TextArea rows={2} placeholder="Ghi chú thêm (tùy chọn)" />
-          </Form.Item>
-
-          <Form.Item>
-            <Space style={{ width: '100%', justifyContent: 'flex-end' }}>
-              <Button onClick={() => setConfirmModal({ visible: false, appointment: null })}>
-                Hủy
-              </Button>
-              <Button type="primary" htmlType="submit" icon={<CheckCircleOutlined />}>
-                Xác Nhận Thanh Toán
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
       </Modal>
     </div>
   );

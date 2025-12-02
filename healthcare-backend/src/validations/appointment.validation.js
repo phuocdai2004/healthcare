@@ -114,3 +114,5 @@ const appointmentValidation = {
     notes: Joi.string().max(500).optional()
   })
 };
+
+module.exports = appointmentValidation;

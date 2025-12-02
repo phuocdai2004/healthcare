@@ -15,6 +15,8 @@ class AppointmentController {
   async createAppointment(req, res, next) {
     try {
       console.log('📅 [APPOINTMENT] Creating new appointment');
+      console.log('📅 [APPOINTMENT] Request body:', JSON.stringify(req.body, null, 2));
+      console.log('📅 [APPOINTMENT] User:', req.user?.email, req.user?.role);
       
       const appointmentData = {
         ...req.body,
@@ -41,6 +43,8 @@ class AppointmentController {
       });
 
     } catch (error) {
+      console.error('❌ [APPOINTMENT] Error creating appointment:', error.message);
+      console.error('❌ [APPOINTMENT] Error stack:', error.stack);
       next(error);
     }
   }
@@ -472,6 +476,275 @@ class AppointmentController {
         data: result.appointments,
         pagination: result.pagination,
         summary: result.summary
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 🎯 SIMPLE CONFIRM APPOINTMENT (FOR QUICK TESTING)
+   * - Very simple: just change status to CONFIRMED
+   * - No validation needed
+   * - Accept both MongoDB _id and appointmentId
+   */
+  async simpleConfirmAppointment(req, res, next) {
+    try {
+      const { appointmentId } = req.params;
+      console.log('✅ [SIMPLE CONFIRM] Received ID:', appointmentId);
+      console.log('✅ [SIMPLE CONFIRM] ID length:', appointmentId?.length);
+      console.log('✅ [SIMPLE CONFIRM] ID is valid ObjectId?', /^[0-9a-f]{24}$/i.test(appointmentId));
+
+      const Appointment = require('../models/appointment.model');
+
+      // Try MongoDB _id first
+      let appointment = null;
+      
+      // Check if it looks like a MongoDB ObjectId
+      if (/^[0-9a-f]{24}$/i.test(appointmentId)) {
+        appointment = await Appointment.findById(appointmentId);
+        console.log('✅ [SIMPLE CONFIRM] Searched by _id, found:', !!appointment);
+      }
+      
+      // If not found, try appointmentId string (AP...)
+      if (!appointment) {
+        appointment = await Appointment.findOne({ appointmentId: appointmentId });
+        console.log('✅ [SIMPLE CONFIRM] Searched by appointmentId string, found:', !!appointment);
+      }
+
+      if (!appointment) {
+        console.log('❌ [SIMPLE CONFIRM] Appointment not found with any method:', appointmentId);
+        return res.status(404).json({
+          success: false,
+          message: 'Lịch hẹn không tìm thấy',
+          error: 'NOT_FOUND',
+          receivedId: appointmentId
+        });
+      }
+
+      // Update status
+      appointment.status = 'CONFIRMED';
+      appointment.confirmedAt = new Date();
+      appointment.confirmedBy = req.user._id;
+      
+      // Also mark payment as PAID
+      if (appointment.payment) {
+        appointment.payment.status = 'PAID';
+        appointment.payment.paidAt = new Date();
+        appointment.payment.confirmedBy = req.user._id;
+        appointment.payment.confirmedAt = new Date();
+      }
+      
+      await appointment.save();
+
+      console.log('✅ [SIMPLE CONFIRM] Appointment confirmed:', appointment.appointmentId);
+
+      res.json({
+        success: true,
+        message: 'Xác nhận lịch hẹn thành công',
+        data: {
+          _id: appointment._id,
+          appointmentId: appointment.appointmentId,
+          patientId: appointment.patientId,
+          doctorId: appointment.doctorId,
+          appointmentDate: appointment.appointmentDate,
+          status: appointment.status,
+          confirmedAt: appointment.confirmedAt
+        }
+      });
+
+    } catch (error) {
+      console.error('❌ [SIMPLE CONFIRM] Error:', error.message);
+      console.error('❌ [SIMPLE CONFIRM] Stack:', error.stack);
+      res.status(500).json({
+        success: false,
+        message: 'Lỗi xác nhận lịch hẹn',
+        error: error.message
+      });
+    }
+  }
+
+  /**
+   * 👨‍⚕️ LẤY LỊCH HẸN CHỜ KHÁM CỦA BÁC SĨ
+   */
+  async getDoctorPendingAppointments(req, res, next) {
+    try {
+      const { page = 1, limit = 10 } = req.query;
+      const doctorId = req.user._id;
+
+      console.log('👨‍⚕️ [DOCTOR] Getting pending appointments for doctor:', doctorId);
+
+      const result = await appointmentService.getDoctorPendingAppointments(
+        doctorId,
+        parseInt(page),
+        parseInt(limit)
+      );
+
+      res.json({
+        success: true,
+        message: 'Lấy danh sách lịch hẹn chờ khám thành công',
+        data: result
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 👨‍⚕️ LẤY LỊCH HẸN HÔM NAY CỦA BÁC SĨ
+   */
+  async getDoctorTodayAppointments(req, res, next) {
+    try {
+      const doctorId = req.user._id;
+
+      console.log('👨‍⚕️ [DOCTOR] Getting today appointments for doctor:', doctorId);
+
+      const appointments = await appointmentService.getDoctorTodayAppointments(doctorId);
+
+      res.json({
+        success: true,
+        message: 'Lấy danh sách lịch hẹn hôm nay thành công',
+        data: appointments
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 👨‍⚕️ CHẤP NHẬN LỊCH HẸN
+   */
+  async acceptAppointment(req, res, next) {
+    try {
+      const { appointmentId } = req.params;
+      const doctorId = req.user._id;
+
+      console.log('✅ [DOCTOR] Doctor accepting appointment:', appointmentId);
+
+      const appointment = await appointmentService.acceptAppointment(appointmentId, doctorId);
+
+      // 🎯 AUDIT LOG
+      await auditLog(AUDIT_ACTIONS.APPOINTMENT_UPDATE, {
+        resource: 'Appointment',
+        resourceId: appointment._id,
+        metadata: {
+          appointmentId: appointment.appointmentId,
+          action: 'ACCEPTED_BY_DOCTOR',
+          doctorId
+        }
+      })(req, res, () => {});
+
+      res.json({
+        success: true,
+        message: '✅ Đã chấp nhận lịch hẹn',
+        data: appointment
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 👨‍⚕️ TỪ CHỐ LỊCH HẸN
+   */
+  async rejectAppointment(req, res, next) {
+    try {
+      const { appointmentId } = req.params;
+      const { reason } = req.body;
+      const doctorId = req.user._id;
+
+      console.log('❌ [DOCTOR] Doctor rejecting appointment:', appointmentId, 'Reason:', reason);
+
+      const appointment = await appointmentService.rejectAppointment(appointmentId, doctorId, reason);
+
+      // 🎯 AUDIT LOG
+      await auditLog(AUDIT_ACTIONS.APPOINTMENT_UPDATE, {
+        resource: 'Appointment',
+        resourceId: appointment._id,
+        metadata: {
+          appointmentId: appointment.appointmentId,
+          action: 'REJECTED_BY_DOCTOR',
+          reason,
+          doctorId
+        }
+      })(req, res, () => {});
+
+      res.json({
+        success: true,
+        message: '❌ Đã từ chối lịch hẹn',
+        data: appointment
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 👨‍⚕️ BẮT ĐẦU KHÁM - NHẬP THÔNG TIN KHÁM TỔNG QUÁT
+   */
+  async startConsultation(req, res, next) {
+    try {
+      const { appointmentId } = req.params;
+      const doctorId = req.user._id;
+      const { consultation } = req.body;
+
+      console.log('🔍 [DOCTOR] Starting consultation for appointment:', appointmentId);
+
+      const appointment = await appointmentService.startConsultation(
+        appointmentId,
+        doctorId,
+        { consultation }
+      );
+
+      res.json({
+        success: true,
+        message: 'Bắt đầu khám bệnh nhân',
+        data: appointment
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  /**
+   * 👨‍⚕️ KẾT THÚC KHÁM - LƯU CHẨN ĐOÁN, ĐƠN THUỐC, KẾT LUẬN
+   */
+  async finishConsultation(req, res, next) {
+    try {
+      const { appointmentId } = req.params;
+      const doctorId = req.user._id;
+      const { consultation, prescriptions, completion } = req.body;
+
+      console.log('✅ [DOCTOR] Finishing consultation for appointment:', appointmentId);
+
+      const appointment = await appointmentService.finishConsultation(
+        appointmentId,
+        doctorId,
+        { consultation, prescriptions, completion }
+      );
+
+      // 🎯 AUDIT LOG
+      await auditLog(AUDIT_ACTIONS.APPOINTMENT_UPDATE, {
+        resource: 'Appointment',
+        resourceId: appointment._id,
+        metadata: {
+          appointmentId: appointment.appointmentId,
+          action: 'CONSULTATION_COMPLETED',
+          doctorId,
+          outcome: completion?.outcome
+        }
+      })(req, res, () => {});
+
+      res.json({
+        success: true,
+        message: '✅ Kết thúc khám bệnh nhân thành công',
+        data: appointment
       });
 
     } catch (error) {

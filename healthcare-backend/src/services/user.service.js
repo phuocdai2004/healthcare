@@ -892,8 +892,10 @@ async listDeletedUsers(options = {}) {
   async getDoctorsForBooking(filter = {}) {
     try {
       const query = { 
-        role: ROLES.DOCTOR, 
-        status: 'ACTIVE' 
+        role: ROLES.DOCTOR,
+        // 🔐 CHỈ HIỆN BÁC SĨ CÓ TRẠNG THÁI ACTIVE HOẶC PENDING_VERIFICATION
+        // Tạm cho phép PENDING_VERIFICATION để bác sĩ mới có thể đặt lịch
+        status: { $in: ['ACTIVE', 'PENDING_VERIFICATION'] }
       };
 
       // Filter theo department nếu có
@@ -913,8 +915,10 @@ async listDeletedUsers(options = {}) {
       }
 
       const doctors = await User.find(query)
-        .select('name email profile professionalInfo')
+        .select('name email profile professionalInfo status')
         .lean();
+
+      console.log(`📋 [BOOKING] Found ${doctors.length} doctors matching criteria`);
 
       // Format response cho frontend
       const formattedDoctors = doctors.map(doc => ({
@@ -926,7 +930,8 @@ async listDeletedUsers(options = {}) {
         department: doc.professionalInfo?.department || 'Khoa Nội',
         yearsOfExperience: doc.professionalInfo?.yearsOfExperience || 0,
         qualifications: doc.professionalInfo?.qualifications || [],
-        consultationFee: 5000 // Giá khám 5 nghìn
+        consultationFee: 5000, // Giá khám 5 nghìn
+        status: doc.status // Thêm status để frontend biết bác sĩ chưa được kích hoạt
       }));
 
       return formattedDoctors;

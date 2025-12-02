@@ -140,20 +140,22 @@ const DoctorDashboard = () => {
 
   const fetchAppointments = async () => {
     try {
-      const response = await apiClient.get(`/appointments/doctor/${user._id}`, {
-        params: {
-          page: pagination.current,
-          limit: pagination.pageSize
-        }
-      });
+      // Fetch today appointments
+      const [todayRes, pendingRes] = await Promise.all([
+        apiClient.get('/appointments/doctor/today-appointments'),
+        apiClient.get('/appointments/doctor/pending-appointments?limit=100')
+      ]);
 
-      if (response.data.success) {
-        setAppointments(response.data.data.appointments || response.data.data || []);
-        setPagination({
-          ...pagination,
-          total: response.data.data.total || 0
-        });
-      }
+      const allAppointments = [
+        ...(todayRes.data.data || []),
+        ...(pendingRes.data.data?.appointments || [])
+      ];
+
+      setAppointments(allAppointments);
+      setPagination({
+        ...pagination,
+        total: allAppointments.length
+      });
     } catch (err) {
       console.error('Error fetching appointments:', err);
       message.error('Không thể tải danh sách lịch hẹn');
@@ -215,31 +217,131 @@ const DoctorDashboard = () => {
     setConsultationModalVisible(true);
   };
 
-  // Submit consultation
+  // ✅ Accept appointment
+  const handleAcceptAppointment = async (appointmentId) => {
+    try {
+      setLoading(true);
+      const response = await apiClient.post(`/appointments/doctor/${appointmentId}/accept`);
+      if (response.data.success) {
+        message.success('✅ Đã chấp nhận lịch hẹn');
+        fetchAppointments();
+      }
+    } catch (error) {
+      message.error('❌ Không thể chấp nhận lịch hẹn');
+      console.error('Error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ❌ Reject appointment
+  const handleRejectAppointment = (appointmentId) => {
+    Modal.confirm({
+      title: 'Từ chối lịch hẹn',
+      okText: 'Xác nhận',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        const content = document.getElementById('rejection-reason');
+        if (!content) {
+          // Show input dialog
+          return new Promise((resolve) => {
+            Modal.confirm({
+              title: 'Lý do từ chối',
+              content: (
+                <Input.TextArea
+                  id="rejection-reason"
+                  placeholder="Nhập lý do từ chối..."
+                  rows={3}
+                />
+              ),
+              okText: 'Gửi',
+              cancelText: 'Hủy',
+              onOk: async () => {
+                const reason = document.getElementById('rejection-reason')?.value || 'Không rảnh';
+                try {
+                  await apiClient.post(`/appointments/doctor/${appointmentId}/reject`, {
+                    reason
+                  });
+                  message.success('❌ Đã từ chối lịch hẹn');
+                  fetchAppointments();
+                } catch (error) {
+                  message.error('Không thể từ chối lịch hẹn');
+                }
+              }
+            });
+            resolve();
+          });
+        }
+      }
+    });
+  };
+
+  // Start consultation (begin examination)
+  const handleStartExamination = async (appointmentId) => {
+    try {
+      const consultation = {
+        chiefComplaint: '',
+        historyOfPresentIllness: '',
+        physicalExamination: '',
+        diagnosis: '',
+        assessmentNotes: ''
+      };
+      
+      const response = await apiClient.post(
+        `/appointments/doctor/${appointmentId}/start-consultation`,
+        { consultation }
+      );
+
+      if (response.data.success) {
+        message.success('Bắt đầu khám bệnh nhân');
+        setSelectedAppointment(response.data.data);
+        handleStartConsultation(response.data.data);
+      }
+    } catch (error) {
+      message.error('Lỗi bắt đầu khám');
+    }
+  };
+
+  // Submit consultation - finish consultation and save all data
   const handleSubmitConsultation = async (values) => {
     try {
       setLoading(true);
-      const consultationData = {
-        patientId: selectedAppointment?.patientId?._id || selectedAppointment?.patientId,
-        appointmentId: selectedAppointment?._id,
-        chiefComplaint: values.chiefComplaint,
-        symptoms: values.symptoms?.split(',').map(s => s.trim()),
-        diagnosis: values.diagnosis,
-        notes: values.notes,
-        vitalSigns: {
-          bloodPressure: values.bloodPressure,
-          heartRate: values.heartRate,
-          temperature: values.temperature,
-          weight: values.weight,
-          height: values.height
+      const prescriptions = values.medications?.map(med => ({
+        medicationName: med.name,
+        dosage: med.dosage,
+        frequency: med.frequency,
+        duration: med.duration,
+        instructions: med.instructions
+      })) || [];
+
+      const completionData = {
+        consultation: {
+          chiefComplaint: values.chiefComplaint,
+          historyOfPresentIllness: values.historyOfPresentIllness,
+          physicalExamination: values.physicalExamination,
+          diagnosis: values.diagnosis,
+          assessmentNotes: values.notes,
+          treatmentPlan: values.treatmentPlan
+        },
+        prescriptions,
+        completion: {
+          outcome: values.outcome || 'IMPROVED',
+          followUpRequired: values.followUpRequired || false,
+          followUpNotes: values.followUpNotes || ''
         }
       };
       
-      await apiClient.post('/consultation', consultationData);
-      message.success('Lưu thông tin khám bệnh thành công');
-      setConsultationModalVisible(false);
-      consultationForm.resetFields();
-      fetchAppointments();
+      const response = await apiClient.post(
+        `/appointments/doctor/${selectedAppointment?._id}/finish-consultation`,
+        completionData
+      );
+
+      if (response.data.success) {
+        message.success('✅ Lưu thông tin khám bệnh thành công');
+        setConsultationModalVisible(false);
+        consultationForm.resetFields();
+        fetchAppointments();
+      }
     } catch (err) {
       console.error('Error saving consultation:', err);
       message.error('Lỗi khi lưu thông tin khám bệnh');
@@ -426,20 +528,32 @@ const DoctorDashboard = () => {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => {
+      render: (status, record) => {
         const colors = {
           'SCHEDULED': 'blue',
+          'CONFIRMED': 'cyan',
+          'IN_PROGRESS': 'processing',
           'COMPLETED': 'green',
           'CANCELLED': 'red',
           'NO_SHOW': 'orange'
         };
         const labels = {
           'SCHEDULED': 'Đã lên lịch',
+          'CONFIRMED': 'Xác nhận thanh toán',
+          'IN_PROGRESS': 'Đang khám',
           'COMPLETED': 'Hoàn tất',
           'CANCELLED': 'Đã hủy',
           'NO_SHOW': 'Không tới'
         };
-        return <Tag color={colors[status]}>{labels[status]}</Tag>;
+        
+        let displayLabel = labels[status] || status;
+        if (record.doctorAcceptance?.accepted === false) {
+          displayLabel = '❌ Đã từ chối';
+        } else if (record.doctorAcceptance?.accepted === true) {
+          displayLabel = '✅ ' + displayLabel;
+        }
+        
+        return <Tag color={colors[status]}>{displayLabel}</Tag>;
       }
     },
     {
@@ -471,49 +585,55 @@ const DoctorDashboard = () => {
     {
       title: 'Hành động',
       key: 'actions',
-      width: 280,
+      width: 350,
       render: (_, record) => (
         <Space wrap>
-          <Button 
-            type="primary" 
-            size="small"
-            icon={<FormOutlined />} 
-            onClick={() => handleStartConsultation(record)}
-            title="Khám bệnh"
-          >
-            Khám
-          </Button>
-          <Button 
-            size="small"
-            icon={<MedicineBoxOutlined />} 
-            onClick={() => handleCreatePrescription(record)}
-            title="Kê đơn thuốc"
-            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', color: 'white' }}
-          >
-            Đơn thuốc
-          </Button>
-          <Button 
-            size="small"
-            icon={<ExperimentOutlined />} 
-            onClick={() => handleCreateLabOrder(record)}
-            title="Yêu cầu xét nghiệm"
-            style={{ backgroundColor: '#722ed1', borderColor: '#722ed1', color: 'white' }}
-          >
-            Xét nghiệm
-          </Button>
-          <Button 
-            size="small"
-            icon={<CheckOutlined />} 
-            onClick={() => markCompleted(record._id)} 
-            title="Hoàn tất"
-          />
-          <Button 
-            danger 
-            size="small"
-            icon={<DeleteOutlined />}
-            onClick={() => cancelAppointment(record._id)} 
-            title="Hủy"
-          />
+          {/* Pending decision - show accept/reject */}
+          {record.status === 'CONFIRMED' && !record.doctorAcceptance?.accepted && (
+            <>
+              <Button 
+                type="primary" 
+                size="small"
+                icon={<CheckOutlined />} 
+                onClick={() => handleAcceptAppointment(record._id)}
+                style={{ backgroundColor: '#52c41a' }}
+              >
+                Chấp nhận
+              </Button>
+              <Button 
+                danger 
+                size="small"
+                icon={<DeleteOutlined />}
+                onClick={() => handleRejectAppointment(record._id)}
+              >
+                Từ chối
+              </Button>
+            </>
+          )}
+
+          {/* Accepted - show start consultation */}
+          {(record.status === 'CONFIRMED' || record.status === 'IN_PROGRESS') && 
+           record.doctorAcceptance?.accepted && (
+            <Button 
+              type="primary" 
+              size="small"
+              icon={<FormOutlined />} 
+              onClick={() => handleStartExamination(record._id)}
+            >
+              Khám
+            </Button>
+          )}
+
+          {/* Completed - show view details */}
+          {record.status === 'COMPLETED' && (
+            <Button 
+              size="small"
+              icon={<EyeOutlined />} 
+              onClick={() => handleStartConsultation(record)}
+            >
+              Chi tiết
+            </Button>
+          )}
         </Space>
       )
     }
@@ -921,99 +1041,147 @@ const DoctorDashboard = () => {
 
       {/* Consultation Modal */}
       <Modal
-        title="Khám Bệnh"
+        title={`Khám Bệnh - ${selectedAppointment?.patientId?.name}`}
         open={consultationModalVisible}
         onCancel={() => setConsultationModalVisible(false)}
         footer={null}
-        width={700}
+        width={900}
+        bodyStyle={{ maxHeight: '70vh', overflowY: 'auto' }}
       >
         <Form
           form={consultationForm}
           layout="vertical"
           onFinish={handleSubmitConsultation}
         >
+          {/* Patient Info */}
+          <Card style={{ marginBottom: '16px' }}>
+            <Title level={5}>📋 Thông tin bệnh nhân</Title>
+            <Row gutter={16}>
+              <Col span={12}>
+                <p><strong>Tên:</strong> {selectedAppointment?.patientId?.name}</p>
+              </Col>
+              <Col span={12}>
+                <p><strong>Điện thoại:</strong> {selectedAppointment?.patientId?.phone}</p>
+              </Col>
+              <Col span={12}>
+                <p><strong>Email:</strong> {selectedAppointment?.patientId?.email}</p>
+              </Col>
+              <Col span={12}>
+                <p><strong>Giới tính:</strong> {selectedAppointment?.patientId?.gender}</p>
+              </Col>
+            </Row>
+          </Card>
+
+          <Divider>Ghi Chú Khám</Divider>
+
           <Row gutter={16}>
             <Col span={24}>
               <Form.Item
                 name="chiefComplaint"
-                label="Lý do khám"
-                rules={[{ required: true, message: 'Vui lòng nhập lý do khám' }]}
+                label="Shikayat utama (Lý do chính)"
+                rules={[{ required: true }]}
               >
-                <TextArea rows={2} placeholder="Nhập lý do khám bệnh" />
+                <Input.TextArea rows={2} placeholder="Lý do chính khám bệnh" />
               </Form.Item>
             </Col>
           </Row>
-          
-          <Divider>Chỉ Số Sinh Tồn</Divider>
-          
-          <Row gutter={16}>
-            <Col span={8}>
-              <Form.Item name="bloodPressure" label="Huyết áp (mmHg)">
-                <Input placeholder="120/80" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="heartRate" label="Nhịp tim (bpm)">
-                <InputNumber min={40} max={200} style={{ width: '100%' }} placeholder="72" />
-              </Form.Item>
-            </Col>
-            <Col span={8}>
-              <Form.Item name="temperature" label="Nhiệt độ (°C)">
-                <InputNumber min={35} max={42} step={0.1} style={{ width: '100%' }} placeholder="37" />
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Row gutter={16}>
-            <Col span={12}>
-              <Form.Item name="weight" label="Cân nặng (kg)">
-                <InputNumber min={1} max={300} style={{ width: '100%' }} placeholder="60" />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item name="height" label="Chiều cao (cm)">
-                <InputNumber min={50} max={250} style={{ width: '100%' }} placeholder="170" />
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Divider>Triệu Chứng & Chẩn Đoán</Divider>
-          
+
           <Row gutter={16}>
             <Col span={24}>
               <Form.Item
-                name="symptoms"
-                label="Triệu chứng (cách nhau bởi dấu phẩy)"
+                name="historyOfPresentIllness"
+                label="Lịch sử bệnh hiện tại"
               >
-                <TextArea rows={2} placeholder="Sốt, ho, đau đầu, mệt mỏi..." />
+                <Input.TextArea rows={2} placeholder="Mô tả chi tiết quá trình bệnh" />
               </Form.Item>
             </Col>
           </Row>
-          
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item
+                name="physicalExamination"
+                label="Khám lâm sàng"
+                rules={[{ required: true }]}
+              >
+                <Input.TextArea rows={3} placeholder="Kết quả kiểm tra lâm sàng" />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Row gutter={16}>
             <Col span={24}>
               <Form.Item
                 name="diagnosis"
                 label="Chẩn đoán"
-                rules={[{ required: true, message: 'Vui lòng nhập chẩn đoán' }]}
+                rules={[{ required: true }]}
               >
-                <TextArea rows={2} placeholder="Nhập chẩn đoán bệnh" />
+                <Input.TextArea rows={2} placeholder="Chẩn đoán bệnh" />
               </Form.Item>
             </Col>
           </Row>
-          
+
           <Row gutter={16}>
             <Col span={24}>
-              <Form.Item name="notes" label="Ghi chú">
-                <TextArea rows={3} placeholder="Ghi chú thêm..." />
+              <Form.Item
+                name="treatmentPlan"
+                label="Kế hoạch điều trị"
+                rules={[{ required: true }]}
+              >
+                <Input.TextArea rows={2} placeholder="Kế hoạch điều trị cho bệnh nhân" />
               </Form.Item>
             </Col>
           </Row>
-          
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="notes" label="Ghi chú thêm">
+                <Input.TextArea rows={2} placeholder="Ghi chú bổ sung..." />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Divider>Kết Luận Khám</Divider>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="outcome"
+                label="Kết quả"
+                initialValue="IMPROVED"
+              >
+                <Select>
+                  <Select.Option value="CURED">Khỏi</Select.Option>
+                  <Select.Option value="IMPROVED">Cải thiện</Select.Option>
+                  <Select.Option value="STABLE">Ổn định</Select.Option>
+                  <Select.Option value="WORSENED">Xấu đi</Select.Option>
+                  <Select.Option value="REFERRED">Chuyển viện</Select.Option>
+                </Select>
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="followUpRequired"
+                label="Cần tái khám?"
+                valuePropName="checked"
+              >
+                <Input type="checkbox" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={24}>
+              <Form.Item name="followUpNotes" label="Ghi chú tái khám">
+                <Input.TextArea rows={2} placeholder="Ghi chú về tái khám..." />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Form.Item>
             <Space>
-              <Button type="primary" htmlType="submit" loading={loading}>
-                Lưu Thông Tin
+              <Button type="primary" htmlType="submit" loading={loading} icon={<CheckOutlined />}>
+                Hoàn thành khám
               </Button>
               <Button onClick={() => setConsultationModalVisible(false)}>
                 Hủy

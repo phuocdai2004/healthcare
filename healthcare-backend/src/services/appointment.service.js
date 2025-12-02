@@ -17,28 +17,27 @@ class AppointmentService {
   async createAppointment(appointmentData) {
     try {
       console.log('📅 [SERVICE] Creating appointment');
+      console.log('📅 [SERVICE] Appointment data received:', JSON.stringify(appointmentData, null, 2));
 
       // 🎯 KIỂM TRA BÁC SĨ TỒN TẠI VÀ CÓ PHẢI LÀ DOCTOR
+      console.log('📅 [SERVICE] Looking for doctor with ID:', appointmentData.doctorId);
       const doctor = await User.findOne({ 
         _id: appointmentData.doctorId, 
-        role: 'DOCTOR',
-        status: 'ACTIVE' 
+        role: 'DOCTOR'
       });
+      console.log('📅 [SERVICE] Doctor found:', doctor ? doctor.name : 'NOT FOUND');
       
       if (!doctor) {
-        throw new AppError('Không tìm thấy bác sĩ hoặc bác sĩ không khả dụng', 404, ERROR_CODES.DOCTOR_NOT_FOUND);
+        throw new AppError('Không tìm thấy bác sĩ', 404, ERROR_CODES.DOCTOR_NOT_FOUND);
       }
 
       // 🎯 KIỂM TRA BỆNH NHÂN TỒN TẠI
+      console.log('📅 [SERVICE] Looking for patient with ID:', appointmentData.patientId);
       const patient = await User.findOne({ 
         _id: appointmentData.patientId, 
-        role: 'PATIENT',
-        status: 'ACTIVE' 
+        role: 'PATIENT'
       });
-      
-      if (!patient) {
-        throw new AppError('Không tìm thấy bệnh nhân hoặc tài khoản chưa kích hoạt', 404, ERROR_CODES.PATIENT_NOT_FOUND);
-      }
+      console.log('📅 [SERVICE] Patient found:', patient ? patient.name : 'NOT FOUND');
 
       // 🎯 KIỂM TRA TRÙNG LỊCH
       const conflictingAppointment = await Appointment.findOne({
@@ -72,16 +71,18 @@ class AppointmentService {
         .populate('doctorId', 'name email phone specialization')
         .populate('createdBy', 'name email');
 
-      // 🎯 GỬI EMAIL THÔNG BÁO
+      // 🎯 GỬI EMAIL THÔNG BÁO (SKIP IF SERVICE NOT AVAILABLE)
       try {
-        await notificationEmailService.sendAppointmentConfirmation({
-          patientName: patient.name,
-          patientEmail: patient.email,
-          doctorName: doctor.name,
-          appointmentDate: appointmentData.appointmentDate,
-          appointmentId: appointmentId,
-          clinic: appointmentData.clinic || 'Phòng khám'
-        });
+        if (notificationEmailService && notificationEmailService.sendAppointmentConfirmation) {
+          await notificationEmailService.sendAppointmentConfirmation({
+            patientName: patient.name,
+            patientEmail: patient.email,
+            doctorName: doctor.name,
+            appointmentDate: appointmentData.appointmentDate,
+            appointmentId: appointmentId,
+            clinic: appointmentData.clinic || 'Phòng khám'
+          });
+        }
       } catch (emailError) {
         console.warn('⚠️ [SERVICE] Failed to send appointment confirmation email:', emailError.message);
         // Không throw error, để việc tạo appointment vẫn thành công
@@ -97,7 +98,25 @@ class AppointmentService {
   }
 
   /**
+   * 🎯 LẤY THÔNG TIN LỊC HẸN THEO ID
+   */
+  async getAppointmentById(appointmentId) {
+    try {
+      const appointment = await Appointment.findById(appointmentId)
+        .populate('patientId', 'name email phone dateOfBirth gender')
+        .populate('doctorId', 'name email phone specialization')
+        .populate('createdBy', 'name email');
+      
+      return appointment;
+    } catch (error) {
+      console.error('❌ [SERVICE] Get appointment by ID failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
    * 🎯 LẤY LỊCH HẸN CỦA BỆNH NHÂN
+```
    */
   async getPatientAppointments({ patientId, status, page, limit, startDate, endDate }) {
     try {
@@ -699,6 +718,167 @@ class AppointmentService {
 
     } catch (error) {
       console.error('❌ [SERVICE] Get appointment status summary failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * 👨‍⚕️ LẤY LỊCH HẸN CỦA BÁC SĨ (CHỜ CHẤP NHẬN)
+   */
+  async getDoctorPendingAppointments(doctorId, page = 1, limit = 10) {
+    try {
+      const skip = (page - 1) * limit;
+
+      const [appointments, total] = await Promise.all([
+        Appointment.find({
+          doctorId,
+          status: 'CONFIRMED',
+          appointmentDate: { $gte: new Date() }
+        })
+          .populate('patientId', 'name email phone dateOfBirth gender')
+          .populate('createdBy', 'name email')
+          .sort({ appointmentDate: 1 })
+          .skip(skip)
+          .limit(limit),
+        Appointment.countDocuments({
+          doctorId,
+          status: 'CONFIRMED',
+          appointmentDate: { $gte: new Date() }
+        })
+      ]);
+
+      return {
+        appointments,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          totalItems: total
+        }
+      };
+    } catch (error) {
+      console.error('❌ [SERVICE] Get doctor pending appointments failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * 👨‍⚕️ LẤY LỊCH HẸN HÔM NAY CỦA BÁC SĨ
+   */
+  async getDoctorTodayAppointments(doctorId) {
+    try {
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+
+      const appointments = await Appointment.find({
+        doctorId,
+        appointmentDate: { $gte: startOfDay, $lt: endOfDay },
+        status: { $in: ['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'] }
+      })
+        .populate('patientId', 'name email phone dateOfBirth gender')
+        .sort({ appointmentDate: 1 });
+
+      return appointments;
+    } catch (error) {
+      console.error('❌ [SERVICE] Get doctor today appointments failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * 👨‍⚕️ CHẤP NHẬN LỊCH HẸN
+   */
+  async acceptAppointment(appointmentId, doctorId) {
+    try {
+      const appointment = await Appointment.findOne({
+        _id: appointmentId,
+        doctorId
+      });
+
+      if (!appointment) {
+        throw new AppError('Lịch hẹn không tìm thấy', 404, ERROR_CODES.APPOINTMENT_NOT_FOUND);
+      }
+
+      appointment.acceptAppointment();
+      await appointment.save();
+
+      return appointment.populate(['patientId', 'doctorId']);
+    } catch (error) {
+      console.error('❌ [SERVICE] Accept appointment failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * 👨‍⚕️ TỪ CHỐ LỊCH HẸN
+   */
+  async rejectAppointment(appointmentId, doctorId, reason) {
+    try {
+      const appointment = await Appointment.findOne({
+        _id: appointmentId,
+        doctorId
+      });
+
+      if (!appointment) {
+        throw new AppError('Lịch hẹn không tìm thấy', 404, ERROR_CODES.APPOINTMENT_NOT_FOUND);
+      }
+
+      appointment.rejectAppointment(reason);
+      await appointment.save();
+
+      return appointment.populate(['patientId', 'doctorId']);
+    } catch (error) {
+      console.error('❌ [SERVICE] Reject appointment failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * 👨‍⚕️ BẮT ĐẦU KHÁM VÀ NHẬP GIAO CHI TIẾT KHÁM
+   */
+  async startConsultation(appointmentId, doctorId, consultationData) {
+    try {
+      const appointment = await Appointment.findOne({
+        _id: appointmentId,
+        doctorId,
+        status: 'CONFIRMED'
+      });
+
+      if (!appointment) {
+        throw new AppError('Lịch hẹn không tìm thấy hoặc không hợp lệ', 404, ERROR_CODES.APPOINTMENT_NOT_FOUND);
+      }
+
+      appointment.completeConsultation(consultationData, doctorId);
+      await appointment.save();
+
+      return appointment.populate(['patientId', 'doctorId']);
+    } catch (error) {
+      console.error('❌ [SERVICE] Start consultation failed:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * 👨‍⚕️ KẾT THÚC KHÁM VÀ LƯU KẾT LUẬN
+   */
+  async finishConsultation(appointmentId, doctorId, completionData) {
+    try {
+      const appointment = await Appointment.findOne({
+        _id: appointmentId,
+        doctorId,
+        status: 'IN_PROGRESS'
+      });
+
+      if (!appointment) {
+        throw new AppError('Lịch hẹn không tìm thấy hoặc không đang khám', 404, ERROR_CODES.APPOINTMENT_NOT_FOUND);
+      }
+
+      appointment.finishConsultation(completionData, doctorId);
+      await appointment.save();
+
+      return appointment.populate(['patientId', 'doctorId']);
+    } catch (error) {
+      console.error('❌ [SERVICE] Finish consultation failed:', error.message);
       throw error;
     }
   }

@@ -1,4 +1,5 @@
 const express = require('express');
+const Joi = require('joi');
 const router = express.Router();
 const appointmentController = require('../controllers/appointment.controller');
 const appointmentValidation = require('../validations/appointment.validation');
@@ -47,6 +48,11 @@ router.get(
 // 🎯 TẠO LỊCH HẸN
 router.post(
   '/',
+  (req, res, next) => {
+    console.log('📅 [ROUTE] POST /appointments received');
+    console.log('📅 [ROUTE] Headers:', JSON.stringify(req.headers, null, 2));
+    next();
+  },
   requireRole(ROLES.RECEPTIONIST, ROLES.DOCTOR, ROLES.PATIENT, ROLES.HOSPITAL_ADMIN),
   requirePermission(PERMISSIONS.APPOINTMENT_CREATE),
   validateBody(appointmentValidation.createAppointment),
@@ -58,16 +64,42 @@ router.get(
   '/patient/:patientId',
   requireRole(ROLES.DOCTOR, ROLES.NURSE, ROLES.RECEPTIONIST, ROLES.HOSPITAL_ADMIN, ROLES.PATIENT, ROLES.SUPER_ADMIN),
   requirePermission(PERMISSIONS.APPOINTMENT_VIEW),
+  validateParams(
+    Joi.object({
+      patientId: Joi.string().hex().length(24).required()
+    })
+  ),
   requirePatientDataAccess('patientId'),
   validateQuery(appointmentValidation.getPatientAppointments),
   appointmentController.getPatientAppointments
 );
 
-// 🎯 LẤY LỊCH HẸN CỦA BÁC SĨ
+// 👨‍⚕️ BÁC SĨ - LẤY LỊCH HẸN CHỜ KHÁM (NO PARAMS - ĐẶT TRƯỚC ROUTE CÓ :doctorId)
+router.get(
+  '/doctor/pending-appointments',
+  requireRole(ROLES.DOCTOR),
+  requirePermission(PERMISSIONS.APPOINTMENT_VIEW),
+  appointmentController.getDoctorPendingAppointments
+);
+
+// 👨‍⚕️ BÁC SĨ - LẤY LỊCH HẸN HÔM NAY (NO PARAMS - ĐẶT TRƯỚC ROUTE CÓ :doctorId)
+router.get(
+  '/doctor/today-appointments',
+  requireRole(ROLES.DOCTOR),
+  requirePermission(PERMISSIONS.APPOINTMENT_VIEW),
+  appointmentController.getDoctorTodayAppointments
+);
+
+// 🎯 LẤY LỊCH HẸN CỦA BÁC SĨ (CÓ PARAMS)
 router.get(
   '/doctor/:doctorId',
   requireRole(ROLES.DOCTOR, ROLES.NURSE, ROLES.RECEPTIONIST, ROLES.HOSPITAL_ADMIN, ROLES.DEPARTMENT_HEAD, ROLES.SUPER_ADMIN),
   requirePermission(PERMISSIONS.APPOINTMENT_VIEW),
+  validateParams(
+    Joi.object({
+      doctorId: Joi.string().hex().length(24).required()
+    })
+  ),
   validateQuery(appointmentValidation.getDoctorAppointments),
   appointmentController.getDoctorAppointments
 );
@@ -80,11 +112,80 @@ router.get(
   appointmentController.getDoctorPaidAppointments
 );
 
+// 👨‍⚕️ BÁC SĨ - CHẤP NHẬN LỊCH HẸN
+router.post(
+  '/doctor/:appointmentId/accept',
+  requireRole(ROLES.DOCTOR),
+  requirePermission(PERMISSIONS.APPOINTMENT_UPDATE),
+  validateParams(
+    Joi.object({
+      appointmentId: Joi.string().hex().length(24).required()
+    })
+  ),
+  appointmentController.acceptAppointment
+);
+
+// 👨‍⚕️ BÁC SĨ - TỪ CHỐ LỊCH HẹN
+router.post(
+  '/doctor/:appointmentId/reject',
+  requireRole(ROLES.DOCTOR),
+  requirePermission(PERMISSIONS.APPOINTMENT_UPDATE),
+  validateParams(
+    Joi.object({
+      appointmentId: Joi.string().hex().length(24).required()
+    })
+  ),
+  validateBody(Joi.object({
+    reason: Joi.string().required()
+  })),
+  appointmentController.rejectAppointment
+);
+
+// 👨‍⚕️ BÁC SĨ - BẮT ĐẦU KHÁM
+router.post(
+  '/doctor/:appointmentId/start-consultation',
+  requireRole(ROLES.DOCTOR),
+  requirePermission(PERMISSIONS.APPOINTMENT_UPDATE),
+  validateParams(
+    Joi.object({
+      appointmentId: Joi.string().hex().length(24).required()
+    })
+  ),
+  appointmentController.startConsultation
+);
+
+// 👨‍⚕️ BÁC SĨ - KẾT THÚC KHÁM VÀ LƯU KẾT LUẬN
+router.post(
+  '/doctor/:appointmentId/finish-consultation',
+  requireRole(ROLES.DOCTOR),
+  requirePermission(PERMISSIONS.APPOINTMENT_UPDATE),
+  validateParams(
+    Joi.object({
+      appointmentId: Joi.string().hex().length(24).required()
+    })
+  ),
+  appointmentController.finishConsultation
+);
+
+// ✅ SIMPLE CONFIRM - KHÔNG CẦN NHẬP THÔNG TIN (ĐẶT TRƯỚC :appointmentId)
+// Chấp nhận cả MongoDB _id và appointmentId string (AP...)
+router.post(
+  '/simple-confirm/:appointmentId',
+  requireRole(ROLES.RECEPTIONIST, ROLES.HOSPITAL_ADMIN, ROLES.SUPER_ADMIN),
+  requirePermission(PERMISSIONS.APPOINTMENT_UPDATE),
+  appointmentController.simpleConfirmAppointment
+);
+
 // 🎯 LẤY THÔNG TIN LỊCH HẸN CHI TIẾT
 router.get(
   '/:appointmentId',
   requireRole(ROLES.DOCTOR, ROLES.NURSE, ROLES.RECEPTIONIST, ROLES.HOSPITAL_ADMIN, ROLES.PATIENT),
   requirePermission(PERMISSIONS.APPOINTMENT_VIEW),
+  validateParams(
+    Joi.object({
+      appointmentId: Joi.string().hex().length(24).required()
+    })
+  ),
   appointmentController.getAppointment
 );
 
@@ -93,6 +194,11 @@ router.put(
   '/:appointmentId',
   requireRole(ROLES.DOCTOR, ROLES.RECEPTIONIST, ROLES.HOSPITAL_ADMIN),
   requirePermission(PERMISSIONS.APPOINTMENT_UPDATE),
+  validateParams(
+    Joi.object({
+      appointmentId: Joi.string().hex().length(24).required()
+    })
+  ),
   validateBody(appointmentValidation.updateAppointment),
   appointmentController.updateAppointment
 );
@@ -102,6 +208,11 @@ router.post(
   '/:appointmentId/cancel',
   requireRole(ROLES.DOCTOR, ROLES.RECEPTIONIST, ROLES.PATIENT, ROLES.HOSPITAL_ADMIN),
   requirePermission(PERMISSIONS.APPOINTMENT_CANCEL),
+  validateParams(
+    Joi.object({
+      appointmentId: Joi.string().hex().length(24).required()
+    })
+  ),
   validateBody(appointmentValidation.cancelAppointment),
   appointmentController.cancelAppointment
 );
@@ -111,6 +222,11 @@ router.post(
   '/:appointmentId/confirm',
   requireRole(ROLES.RECEPTIONIST, ROLES.HOSPITAL_ADMIN, ROLES.PATIENT),
   requirePermission(PERMISSIONS.APPOINTMENT_UPDATE),
+  validateParams(
+    Joi.object({
+      appointmentId: Joi.string().hex().length(24).required()
+    })
+  ),
   appointmentController.confirmAppointment
 );
 
@@ -128,6 +244,11 @@ router.get(
   '/schedules/doctor/:doctorId',
   requireRole(ROLES.DOCTOR, ROLES.NURSE, ROLES.RECEPTIONIST, ROLES.HOSPITAL_ADMIN),
   requirePermission(PERMISSIONS.APPOINTMENT_VIEW_SCHEDULE),
+  validateParams(
+    Joi.object({
+      doctorId: Joi.string().hex().length(24).required()
+    })
+  ),
   validateQuery(appointmentValidation.getDoctorSchedule),
   appointmentController.getDoctorSchedule
 );
@@ -137,6 +258,11 @@ router.post(
   '/:appointmentId/payment/confirm',
   requireRole(ROLES.RECEPTIONIST, ROLES.HOSPITAL_ADMIN, ROLES.SUPER_ADMIN),
   requirePermission(PERMISSIONS.APPOINTMENT_UPDATE),
+  validateParams(
+    Joi.object({
+      appointmentId: Joi.string().hex().length(24).required()
+    })
+  ),
   validateBody(appointmentValidation.confirmPayment),
   appointmentController.confirmPayment
 );

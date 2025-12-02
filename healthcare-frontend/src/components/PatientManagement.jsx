@@ -20,7 +20,8 @@ import {
   Tooltip,
   Divider,
   DatePicker,
-  InputNumber
+  InputNumber,
+  App as AntdApp
 } from 'antd';
 import {
   UserOutlined,
@@ -47,6 +48,7 @@ const { Option } = Select;
 
 const PatientManagement = () => {
   const { user } = useAuth();
+  const { modal, message: messageApi } = AntdApp.useApp();
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
@@ -99,7 +101,7 @@ const PatientManagement = () => {
         });
       }
     } catch (err) {
-      message.error('Không thể tải danh sách bệnh nhân');
+      messageApi.error('Không thể tải danh sách bệnh nhân');
       console.error(err);
     } finally {
       setLoading(false);
@@ -136,7 +138,7 @@ const PatientManagement = () => {
 
   const handleCreatePatient = () => {
     if (!canCreatePatient) {
-      message.error('Bạn không có quyền tạo tài khoản bệnh nhân');
+      messageApi.error('Bạn không có quyền tạo tài khoản bệnh nhân');
       return;
     }
     setSelectedPatient(null);
@@ -146,7 +148,7 @@ const PatientManagement = () => {
   };
 
   const handleAdmitPatient = async (patientId) => {
-    Modal.confirm({
+    modal.confirm({
       title: 'Nhập viện',
       content: 'Bạn có chắc chắn muốn nhập viện cho bệnh nhân này?',
       okText: 'Nhập viện',
@@ -157,17 +159,17 @@ const PatientManagement = () => {
             admissionDate: new Date().toISOString(),
             reason: 'Nhập viện từ giao diện quản lý'
           });
-          message.success('Nhập viện thành công');
+          messageApi.success('Nhập viện thành công');
           await fetchPatients();
         } catch (err) {
-          message.error('Không thể nhập viện');
+          messageApi.error('Không thể nhập viện');
         }
       }
     });
   };
 
   const handleDischargePatient = async (patientId) => {
-    Modal.confirm({
+    modal.confirm({
       title: 'Xuất viện',
       content: 'Bạn có chắc chắn muốn xuất viện cho bệnh nhân này?',
       okText: 'Xuất viện',
@@ -178,10 +180,10 @@ const PatientManagement = () => {
             dischargeDate: new Date().toISOString(),
             reason: 'Xuất viện từ giao diện quản lý'
           });
-          message.success('Xuất viện thành công');
+          messageApi.success('Xuất viện thành công');
           await fetchPatients();
         } catch (err) {
-          message.error('Không thể xuất viện');
+          messageApi.error('Không thể xuất viện');
         }
       }
     });
@@ -200,7 +202,7 @@ const PatientManagement = () => {
       if (editMode && selectedPatient) {
         // Update user profile
         await apiClient.put(`/users/${selectedPatient.userId?._id}`, userData);
-        message.success('Cập nhật bệnh nhân thành công');
+        messageApi.success('Cập nhật bệnh nhân thành công');
       } else {
         await apiClient.post('/users', {
           ...userData,
@@ -208,7 +210,7 @@ const PatientManagement = () => {
           password: values.password || 'DefaultPass123!@',
           confirmPassword: values.password || 'DefaultPass123!@'
         });
-        message.success('Tạo bệnh nhân thành công');
+        messageApi.success('Tạo bệnh nhân thành công');
       }
 
       setModalVisible(false);
@@ -216,7 +218,7 @@ const PatientManagement = () => {
       fetchPatients();
     } catch (err) {
       const errorMsg = err.response?.data?.error || err.response?.data?.message || 'Có lỗi xảy ra';
-      message.error(errorMsg);
+      messageApi.error(errorMsg);
     }
   };
 
