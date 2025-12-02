@@ -96,7 +96,7 @@ export const AuthProvider = ({ children }) => {
       const refreshToken = localStorage.getItem('refreshToken');
       if (!refreshToken) throw new Error('No refresh token');
 
-      const response = await apiClient.post('/auth/refresh-token', { refreshToken });
+      const response = await apiClient.post('/auth/refresh', { refreshToken });
 
       if (response.data.success) {
         const { accessToken } = response.data.data;

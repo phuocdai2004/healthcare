@@ -294,6 +294,8 @@ async deleteUser(req, res, next) {
     const { userId } = req.params;
     const { reason } = req.body;
     
+    console.log('🗑️ [DELETE USER] userId:', userId, 'reason:', reason, 'body:', req.body);
+    
     await userService.deleteUser(userId, reason, req.user);
     
     await auditLog(AUDIT_ACTIONS.USER_DELETE, {
@@ -363,6 +365,33 @@ async listDeletedUsers(req, res, next) {
       success: true,
       data: result.users,
       pagination: result.pagination
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * 🎯 XÓA VĨNH VIỄN USER (HARD DELETE)
+ */
+async permanentlyDeleteUser(req, res, next) {
+  try {
+    const { userId } = req.params;
+    
+    const result = await userService.permanentlyDeleteUser(userId, req.user);
+    
+    await auditLog(AUDIT_ACTIONS.USER_DELETE, {
+      metadata: { 
+        deletedUserId: userId, 
+        deletedBy: req.user._id,
+        deletionType: 'PERMANENT_DELETE'
+      }
+    })(req, res, () => {});
+    
+    res.json({
+      success: true,
+      message: 'Xóa vĩnh viễn user thành công',
+      data: result
     });
   } catch (error) {
     next(error);

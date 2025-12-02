@@ -91,6 +91,14 @@ router.put(
   userController.updateUserProfile
 );
 
+// 🎯 DANH SÁCH USER ĐÃ XÓA - GET /api/users/deleted/list (ĐẶT TRƯỚC :userId)
+router.get(
+  '/deleted/list',
+  rbacRequirePermission(PERMISSIONS.VIEW_USER),
+  validateQuery(userValidation.schemas.listUsersQuery),
+  userController.listDeletedUsers
+);
+
 // 🎯 LẤY USER THEO ID - GET /api/users/:userId
 router.get(
   '/:userId',
@@ -181,12 +189,15 @@ router.patch(
   userController.restoreUser
 );
 
-// 🎯 DANH SÁCH USER ĐÃ XÓA - GET /api/users/deleted/list
-router.get(
-  '/deleted/list',
-  rbacRequirePermission(PERMISSIONS.VIEW_USER),
-  validateQuery(userValidation.schemas.listUsersQuery),
-  userController.listDeletedUsers
+// 🎯 XÓA VĨNH VIỄN USER - DELETE /api/users/:userId/permanent
+router.delete(
+  '/:userId/permanent',
+  rbacRequirePermission(PERMISSIONS.DELETE_USER),
+  validateCombined({
+    params: userValidation.schemas.userIdParams,
+    body: userValidation.schemas.disableUserBody
+  }),
+  userController.permanentlyDeleteUser
 );
 
 module.exports = router;

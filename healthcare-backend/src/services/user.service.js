@@ -626,10 +626,11 @@ class UserService {
  */
 async deleteUser(userId, reason, currentUser) {
   try {
-    console.log('🎯 [USER SERVICE] Deleting user:', userId);
+    console.log('🎯 [USER SERVICE] Deleting user:', userId, 'reason:', reason);
 
     const user = await User.findById(userId);
     if (!user) {
+      console.log('❌ User not found:', userId);
       throw new AppError('Không tìm thấy user', 404, ERROR_CODES.USER_NOT_FOUND);
     }
 
@@ -651,13 +652,21 @@ async deleteUser(userId, reason, currentUser) {
       );
     }
 
-    // 🛡️ KIỂM TRA QUYỀN XÓA ROLE CAO HƠN
-    if (ROLE_HIERARCHY.indexOf(user.role) < ROLE_HIERARCHY.indexOf(currentUser.role)) {
-      throw new AppError(
-        'Không có quyền xóa user có role cao hơn',
-        403,
-        ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS
-      );
+    // 🛡️ KIỂM TRA QUYỀN XÓA - CHỈ SUPER_ADMIN CÓ THỂ XÓA ADMIN
+    if (currentUser.role !== ROLES.SUPER_ADMIN) {
+      // Nếu không phải SUPER_ADMIN, chỉ có thể xóa user với role thấp hơn
+      const userRoleIndex = ROLE_HIERARCHY.indexOf(user.role);
+      const currentRoleIndex = ROLE_HIERARCHY.indexOf(currentUser.role);
+      console.log(`🛡️ [PERMISSION CHECK] userRole: ${user.role} (${userRoleIndex}), currentRole: ${currentUser.role} (${currentRoleIndex})`);
+      
+      if (userRoleIndex < currentRoleIndex) {
+        console.log('❌ Cannot delete user with higher role');
+        throw new AppError(
+          'Không có quyền xóa user có role cao hơn',
+          403,
+          ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS
+        );
+      }
     }
 
     // 🎯 KIỂM TRA NẾU USER ĐÃ BỊ XÓA
@@ -673,12 +682,17 @@ async deleteUser(userId, reason, currentUser) {
     user.isDeleted = true;
     user.deletedAt = new Date();
     user.deletedBy = currentUser._id;
-    user.deletionReason = reason;
+    user.deletionReason = reason || 'Xóa bởi quản trị viên';
     user.status = 'DELETED';
     user.isActive = false;
     
     // 🎯 ẨN EMAIL ĐỂ CÓ THỂ TÁI SỬ DỤNG
     user.email = `deleted_${Date.now()}_${user.email}`;
+    
+    // 🎯 ĐẢM BẢO CÁC FIELD BẮT BUỘC KHÔNG BỊ XÓA
+    // passwordHash và name được giữ nguyên để tuân thủ schema validation
+    if (!user.passwordHash) user.passwordHash = 'DELETED';
+    if (!user.name) user.name = 'DELETED_USER';
     
     await user.save();
 
@@ -881,6 +895,76 @@ async listDeletedUsers(options = {}) {
 
   } catch (error) {
     console.error('❌ [USER SERVICE] List deleted users error:', error);
+    throw error;
+  }
+}
+
+/**
+ * 🎯 XÓA VĨNH VIỄN USER (HARD DELETE)
+ */
+async permanentlyDeleteUser(userId, currentUser) {
+  try {
+    console.log('🗑️ [USER SERVICE] Permanently deleting user:', userId);
+
+    const user = await User.findOne({ 
+      _id: userId, 
+      isDeleted: true 
+    });
+    
+    if (!user) {
+      throw new AppError(
+        'Không tìm thấy user đã xóa',
+        404,
+        ERROR_CODES.USER_NOT_FOUND
+      );
+    }
+
+    // 🛡️ KHÔNG THỂ XÓA VĨNH VIỄN SUPER ADMIN
+    if (user.role === ROLES.SUPER_ADMIN) {
+      throw new AppError(
+        'Không thể xóa vĩnh viễn Super Admin',
+        403,
+        ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS
+      );
+    }
+
+    // 🛡️ KIỂM TRA QUYỀN XÓA VĨNH VIỄN - CHỈ SUPER_ADMIN CÓ THỂ XÓA ADMIN
+    if (!hasPermission(currentUser.role, PERMISSIONS.DELETE_USER)) {
+      throw new AppError(
+        'Bạn không có quyền xóa vĩnh viễn user',
+        403,
+        ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS
+      );
+    }
+
+    if (currentUser.role !== ROLES.SUPER_ADMIN) {
+      // Nếu không phải SUPER_ADMIN, chỉ có thể xóa user với role thấp hơn
+      if (ROLE_HIERARCHY.indexOf(user.role) < ROLE_HIERARCHY.indexOf(currentUser.role)) {
+        throw new AppError(
+          'Không có quyền xóa user có role cao hơn',
+          403,
+          ERROR_CODES.AUTH_INSUFFICIENT_PERMISSIONS
+        );
+      }
+    }
+
+    // 🎯 XÓA VĐ CÁC DỮ LIỆU LIÊN QUAN TRƯỚC
+    // - Patient profile
+    await Patient.deleteOne({ userId: userId });
+    
+    // 🎯 XÓA USER KHỎI DATABASE
+    await User.deleteOne({ _id: userId });
+
+    console.log('✅ [USER SERVICE] User permanently deleted:', userId);
+
+    return { 
+      success: true, 
+      message: 'Xóa vĩnh viễn người dùng thành công',
+      deletedUserId: userId
+    };
+
+  } catch (error) {
+    console.error('❌ [USER SERVICE] Permanent delete user error:', error);
     throw error;
   }
 }

@@ -66,7 +66,7 @@ apiClient.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      return axios.post(`${API_BASE_URL}/auth/refresh-token`, {
+      return axios.post(`${API_BASE_URL}/auth/refresh`, {
         refreshToken: refreshToken
       })
         .then((response) => {

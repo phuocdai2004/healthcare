@@ -10,7 +10,7 @@ const SuperAdminLogin = () => {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
-  const { message } = AntApp.useApp(); // ✅ Use hook from AntApp instead of static
+  const { message } = AntApp.useApp(); // Use hook from AntApp instead of static
 
   const handleSubmit = async (values) => {
     try {

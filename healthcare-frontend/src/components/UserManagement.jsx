@@ -197,15 +197,59 @@ const UserManagement = () => {
 
   const handleDeleteUser = async (userId) => {
     try {
-      await apiClient.delete(
-        `/users/${userId}`
+      console.log('🗑️ Deleting user:', userId);
+      const response = await apiClient.delete(
+        `/users/${userId}`,
+        {
+          data: { reason: 'Xóa bởi quản trị viên' }
+        }
       );
+      console.log('✅ Delete success:', response.data);
       
       message.success('Xóa người dùng thành công');
       fetchUsers();
     } catch (err) {
-      message.error(err.response?.data?.error || 'Không thể xóa người dùng');
-      console.error(err);
+      console.error('❌ Delete error:', err);
+      const errorMsg = err.response?.data?.error?.message || err.response?.data?.error || 'Không thể xóa người dùng';
+      message.error(errorMsg);
+    }
+  };
+
+  const confirmDeleteUser = (userId) => {
+    console.log('📝 [CONFIRM DIALOG] Opening confirm dialog for userId:', userId);
+    Modal.confirm({
+      title: 'Xác nhận xóa người dùng',
+      content: 'Bạn có chắc chắn muốn xóa người dùng này? Họ có thể được khôi phục sau.',
+      okText: 'Xóa',
+      cancelText: 'Hủy',
+      okButtonProps: { danger: true },
+      onOk() {
+        console.log('✅ [CONFIRM OK] User confirmed deletion');
+        handleDeleteUser(userId);
+      },
+      onCancel() {
+        console.log('❌ [CONFIRM CANCEL] User cancelled deletion');
+      },
+    });
+  };
+
+  const handlePermanentlyDeleteUser = async (userId) => {
+    try {
+      console.log('🗑️ Permanently deleting user:', userId);
+      const response = await apiClient.delete(
+        `/users/${userId}/permanent`,
+        {
+          data: { reason: 'Xóa vĩnh viễn bởi quản trị viên' }
+        }
+      );
+      console.log('✅ Permanent delete success:', response.data);
+      
+      message.success('Xóa vĩnh viễn người dùng thành công');
+      fetchDeletedUsers();
+    } catch (err) {
+      console.error('❌ Permanent delete error:', err);
+      const errorMsg = err.response?.data?.error?.message || err.response?.data?.error || 'Không thể xóa vĩnh viễn người dùng';
+      message.error(errorMsg);
     }
   };
 
@@ -504,17 +548,16 @@ const UserManagement = () => {
               onClick={() => record.isActive === false ? handleEnableUser(record._id) : handleToggleStatus(record)}
             />
           </Tooltip>
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa người dùng này?"
-            description="Người dùng sẽ được di chuyển vào thư mục đã xóa và có thể khôi phục sau."
-            onConfirm={() => handleDeleteUser(record._id)}
-            okText="Xóa"
-            cancelText="Hủy"
-          >
-            <Tooltip title="Xóa">
-              <Button danger icon={<DeleteOutlined />} size="small" />
-            </Tooltip>
-          </Popconfirm>
+          <Button 
+            danger 
+            icon={<DeleteOutlined />} 
+            size="small"
+            title="Xóa"
+            onClick={() => {
+              console.log('🖱️ [BUTTON CLICK] Delete button clicked, userId:', record._id);
+              confirmDeleteUser(record._id);
+            }}
+          />
         </Space>
       )
     }
@@ -685,7 +728,7 @@ const UserManagement = () => {
         }}
         footer={null}
         width={600}
-        destroyOnClose
+        destroyOnHidden
       >
         <Form form={form} layout="vertical" onFinish={handleSubmit}>
           <Form.Item
@@ -946,7 +989,7 @@ const UserManagement = () => {
                   <Popconfirm
                     title="Xóa vĩnh viễn"
                     description="Hành động này không thể hoàn tác. Dữ liệu người dùng sẽ bị xóa hoàn toàn."
-                    onConfirm={() => handleDeleteUser(record._id)}
+                    onConfirm={() => handlePermanentlyDeleteUser(record._id)}
                     okText="Xóa"
                     cancelText="Hủy"
                     okButtonProps={{ danger: true }}

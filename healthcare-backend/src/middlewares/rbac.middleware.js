@@ -60,7 +60,10 @@ function requirePermission(permission) {
     }
 
     // 🎯 KIỂM TRA QUYỀN
+    console.log(`🔐 [RBAC CHECK] User: ${req.user.email} (${req.user.role}) | Required: ${permission} | Permissions: ${req.user.permissions?.join(', ') || 'NONE'}`);
+    
     if (!hasPermission(req.user.role, permission)) {
+      console.log(`❌ [RBAC DENIED] Permission denied for ${req.user.email}: ${permission}`);
       return next(new AppError(
         `Không có quyền: ${permission}`,
         403,
@@ -68,6 +71,7 @@ function requirePermission(permission) {
       ));
     }
 
+    console.log(`✅ [RBAC ALLOWED] Permission granted for ${req.user.email}: ${permission}`);
     next();
   };
 }

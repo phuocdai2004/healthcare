@@ -130,11 +130,9 @@ const updateUserProfileBody = Joi.object({
 });
 
 const disableUserBody = Joi.object({
-  reason: Joi.string().min(5).max(500).required().messages({
+  reason: Joi.string().min(5).max(500).optional().allow('').messages({
     'string.min': 'Lý do phải có ít nhất 5 ký tự',
     'string.max': 'Lý do không được vượt quá 500 ký tự',
-    'string.empty': 'Vui lòng nhập lý do vô hiệu hóa',
-    'any.required': 'Lý do vô hiệu hóa là bắt buộc'
   })
 });
 

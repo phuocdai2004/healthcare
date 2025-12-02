@@ -49,7 +49,7 @@ const UserSchema = new mongoose.Schema({
   
   status: { 
     type: String, 
-    enum: ['PENDING_VERIFICATION', 'ACTIVE', 'LOCKED', 'DEACTIVATED'], 
+    enum: ['PENDING_VERIFICATION', 'ACTIVE', 'LOCKED', 'DEACTIVATED', 'DELETED'], 
     default: 'PENDING_VERIFICATION',
     index: true
   },
@@ -97,6 +97,29 @@ const UserSchema = new mongoose.Schema({
     qualifications: [String],
     yearsOfExperience: Number,
     hireDate: Date
+  },
+
+  // Soft delete tracking
+  isDeleted: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+  deletedAt: {
+    type: Date,
+    default: null,
+    index: true
+  },
+  deletedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  deletionReason: String,
+  restoredAt: Date,
+  restoredBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
   }
 }, { 
   timestamps: true 
