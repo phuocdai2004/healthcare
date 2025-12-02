@@ -374,6 +374,46 @@ class PatientService {
 
     return 'ACTIVE';
   }
+
+  /**
+   * 🎯 LẤY DANH SÁCH TẤT CẢ BỆNH NHÂN (HỖ TRỢ PHÂN TRANG)
+   */
+  async getAllPatients({ page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc' }) {
+    try {
+      const skip = (page - 1) * limit;
+      const sort = { [sortBy]: sortOrder === 'desc' ? -1 : 1 };
+
+      console.log('📋 [SERVICE] Getting all patients:', { page, limit, sortBy, sortOrder });
+
+      const [patients, total] = await Promise.all([
+        Patient.find()
+          .populate('userId', 'name email phone dateOfBirth gender address status')
+          .sort(sort)
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        Patient.countDocuments()
+      ]);
+
+      const totalPages = Math.ceil(total / limit);
+
+      return {
+        patients,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalItems: total,
+          itemsPerPage: limit,
+          hasNext: page < totalPages,
+          hasPrev: page > 1
+        }
+      };
+
+    } catch (error) {
+      console.error('❌ [SERVICE] Get all patients failed:', error.message);
+      throw error;
+    }
+  }
 }
 
 module.exports = new PatientService();

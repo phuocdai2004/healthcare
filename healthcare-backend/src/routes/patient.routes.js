@@ -20,6 +20,14 @@ const { authenticate } = require('../middlewares/auth.middleware');
 // 🎯 APPLY AUTH MIDDLEWARE CHO TẤT CẢ ROUTES
 router.use(authenticate);
 
+// 🎯 LẤY DANH SÁCH TẤT CẢ BỆNH NHÂN
+router.get(
+  '/',
+  requireRole(ROLES.RECEPTIONIST, ROLES.DOCTOR, ROLES.NURSE, ROLES.HOSPITAL_ADMIN, ROLES.DEPARTMENT_HEAD, ROLES.SUPER_ADMIN),
+  requirePermission(PERMISSIONS.PATIENT_VIEW),
+  patientController.getAllPatients
+);
+
 // 🎯 ĐĂNG KÝ BỆNH NHÂN
 router.post(
   '/register',

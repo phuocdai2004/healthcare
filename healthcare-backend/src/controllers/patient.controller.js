@@ -288,6 +288,45 @@ class PatientController {
       next(error);
     }
   }
+
+  /**
+   * 🎯 LẤY DANH SÁCH TẤT CẢ BỆNH NHÂN
+   */
+  async getAllPatients(req, res, next) {
+    try {
+      const { 
+        page = 1, 
+        limit = 20,
+        sortBy = 'createdAt',
+        sortOrder = 'desc'
+      } = req.query;
+
+      console.log('📋 [PATIENT] Getting all patients:', { page, limit });
+
+      const result = await patientService.getAllPatients({
+        page: parseInt(page),
+        limit: parseInt(limit),
+        sortBy,
+        sortOrder
+      });
+
+      // 🎯 AUDIT LOG
+      await auditLog(AUDIT_ACTIONS.PATIENT_VIEW, {
+        resource: 'Patient',
+        category: 'LIST_ALL'
+      })(req, res, () => {});
+
+      res.json({
+        success: true,
+        message: 'Lấy danh sách bệnh nhân thành công',
+        data: result.patients,
+        pagination: result.pagination
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new PatientController();
