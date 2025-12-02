@@ -11,7 +11,9 @@
     "admin:status": "node src/scripts/superAdminCli.js status",
     "admin:reset": "node src/scripts/superAdminCli.js reset",
     "admin:info": "node src/scripts/superAdminCli.js info",
-    "admin:help": "node src/scripts/superAdminCli.js help"
+    "admin:help": "node src/scripts/superAdminCli.js help",
+    "seed": "node src/scripts/seed-data.js",
+    "seed:reset": "node src/scripts/seed-data.js --reset"
   },
   "keywords": [],
   "author": "",

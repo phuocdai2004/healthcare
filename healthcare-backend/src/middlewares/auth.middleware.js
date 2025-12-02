@@ -47,8 +47,11 @@ async function authenticate(req, res, next) {
     }
 
     // 🎯 KIỂM TRA TRẠNG THÁI TÀI KHOẢN
-    // 🔐 DEV MODE: Allow PENDING_VERIFICATION in development
-    if (process.env.NODE_ENV === 'production' && user.status !== 'ACTIVE') {
+    // 🔐 ALLOW: Always allow ACTIVE or if ALLOW_SELF_ACTIVATE flag is true
+    const allowSelfActivate = (process.env.ALLOW_SELF_ACTIVATE || 'false').toLowerCase() === 'true';
+    const isValidStatus = user.status === 'ACTIVE' || (user.status === 'PENDING_VERIFICATION' && allowSelfActivate);
+    
+    if (!isValidStatus) {
       const errorMessage = getAccountStatusMessage(user.status);
       throw new AppError(errorMessage, 403, ERROR_CODES.AUTH_ACCOUNT_LOCKED);
     }
