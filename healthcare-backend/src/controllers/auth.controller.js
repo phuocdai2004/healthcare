@@ -356,6 +356,44 @@ async function enable2FA(req, res) {
   }
 }
 
+/**
+ * [POST] /api/auth/verify-email
+ * Xác thực email và kích hoạt tài khoản
+ * Được gọi sau khi người dùng nhận được email xác thực
+ */
+async function verifyEmail(req, res, next) {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Email là bắt buộc' 
+      });
+    }
+
+    const user = await authService.verifyEmailAndActivate(email);
+
+    res.json({ 
+      success: true,
+      message: 'Tài khoản đã được kích hoạt thành công. Bạn có thể đăng nhập ngay.',
+      user: {
+        _id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        status: user.status
+      }
+    });
+
+  } catch (err) {
+    res.status(400).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+}
+
 module.exports = {
   register,
   login,
@@ -364,4 +402,5 @@ module.exports = {
   getCurrentUser,
   generate2FA,
   enable2FA,
+  verifyEmail,
 };

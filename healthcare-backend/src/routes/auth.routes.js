@@ -11,6 +11,7 @@ const { PERMISSIONS, ROLES } = require('../constants/roles');
 router.post('/register', validateBody(registerSchema), authController.register);
 router.post('/login', validateBody(loginSchema), authController.login);
 router.post('/refresh', authController.refresh);
+router.post('/verify-email', authController.verifyEmail);
 
 // Protected routes
 router.post('/logout', authenticate, authController.logout);

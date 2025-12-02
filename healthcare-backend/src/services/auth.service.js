@@ -382,6 +382,34 @@ async function disable2FAForUser(userId) {
   return user;
 }
 
+/**
+ * XÁC THỰC EMAIL VÀ KÍCH HOẠT TÀI KHOẢN
+ * - Cho phép người dùng tự kích hoạt tài khoản sau khi đăng ký
+ * 
+ * @param {string} email - Email người dùng
+ * @returns {Promise<Object>} User object
+ */
+async function verifyEmailAndActivate(email) {
+  const user = await User.findOne({ email });
+  
+  if (!user) {
+    throw new Error('Không tìm thấy người dùng với email này');
+  }
+
+  if (user.status === 'ACTIVE') {
+    throw new Error('Tài khoản đã được kích hoạt trước đó');
+  }
+
+  // Kích hoạt tài khoản
+  user.status = 'ACTIVE';
+  user.emailVerifiedAt = new Date();
+  await user.save();
+
+  await log(user._id, 'EMAIL_VERIFIED', { email });
+
+  return user;
+}
+
 module.exports = {
   registerUser,
   login,
@@ -392,4 +420,5 @@ module.exports = {
   generate2FASecret,
   enable2FAForUser,
   disable2FAForUser,
+  verifyEmailAndActivate,
 };
