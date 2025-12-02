@@ -1,22 +1,37 @@
 export const ROLES = {
-  SUPER_ADMIN: 'SUPER_ADMIN',
-  ADMIN: 'ADMIN',
+  HOSPITAL_ADMIN: 'HOSPITAL_ADMIN',
+  DEPARTMENT_HEAD: 'DEPARTMENT_HEAD',
   DOCTOR: 'DOCTOR',
+  NURSE: 'NURSE',
+  PHARMACIST: 'PHARMACIST',
+  LAB_TECHNICIAN: 'LAB_TECHNICIAN',
+  RECEPTIONIST: 'RECEPTIONIST',
+  BILLING_STAFF: 'BILLING_STAFF',
   PATIENT: 'PATIENT'
 };
 
 export const ROLE_LABELS = {
-  SUPER_ADMIN: 'Super Admin',
-  ADMIN: 'Quản trị viên',
+  HOSPITAL_ADMIN: 'Quản trị Bệnh viện',
+  DEPARTMENT_HEAD: 'Trưởng Khoa',
   DOCTOR: 'Bác sĩ',
+  NURSE: 'Y tá',
+  PHARMACIST: 'Dược sĩ',
+  LAB_TECHNICIAN: 'Kỹ thuật viên Xét nghiệm',
+  RECEPTIONIST: 'Lễ tân',
+  BILLING_STAFF: 'Nhân viên Billing',
   PATIENT: 'Bệnh nhân'
 };
 
 export const ROLE_COLORS = {
-  SUPER_ADMIN: 'red',
-  ADMIN: 'orange',
+  HOSPITAL_ADMIN: 'darkred',
+  DEPARTMENT_HEAD: 'orange',
   DOCTOR: 'blue',
-  PATIENT: 'green'
+  NURSE: 'cyan',
+  PHARMACIST: 'purple',
+  LAB_TECHNICIAN: 'magenta',
+  RECEPTIONIST: 'gold',
+  BILLING_STAFF: 'green',
+  PATIENT: 'lime'
 };
 
 export const USER_STATUS = {

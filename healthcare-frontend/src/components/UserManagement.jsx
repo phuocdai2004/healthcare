@@ -464,20 +464,17 @@ const UserManagement = () => {
       dataIndex: 'role',
       key: 'role',
       filters: [
-        { text: 'Super Admin', value: 'SUPER_ADMIN' },
         { text: 'Admin', value: 'ADMIN' },
         { text: 'Bác sĩ', value: 'DOCTOR' },
         { text: 'Bệnh nhân', value: 'PATIENT' }
       ],
       render: (role) => {
         const colors = {
-          SUPER_ADMIN: 'red',
           ADMIN: 'orange',
           DOCTOR: 'blue',
           PATIENT: 'green'
         };
         const labels = {
-          SUPER_ADMIN: 'Super Admin',
           ADMIN: 'Admin',
           DOCTOR: 'Bác sĩ',
           PATIENT: 'Bệnh nhân'
@@ -566,7 +563,14 @@ const UserManagement = () => {
   const stats = {
     total: users.length,
     active: users.filter(u => u.status === 'ACTIVE').length,
+    hospitalAdmin: users.filter(u => u.role === 'HOSPITAL_ADMIN').length,
+    departmentHead: users.filter(u => u.role === 'DEPARTMENT_HEAD').length,
     doctors: users.filter(u => u.role === 'DOCTOR').length,
+    nurses: users.filter(u => u.role === 'NURSE').length,
+    pharmacists: users.filter(u => u.role === 'PHARMACIST').length,
+    labTechnicians: users.filter(u => u.role === 'LAB_TECHNICIAN').length,
+    receptionists: users.filter(u => u.role === 'RECEPTIONIST').length,
+    billingStaff: users.filter(u => u.role === 'BILLING_STAFF').length,
     patients: users.filter(u => u.role === 'PATIENT').length
   };
 
@@ -574,7 +578,7 @@ const UserManagement = () => {
     <div>
       {/* Statistics */}
       <Row gutter={16} className="mb-6">
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={4}>
           <Card>
             <Statistic
               title="Tổng người dùng"
@@ -583,7 +587,7 @@ const UserManagement = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={4}>
           <Card>
             <Statistic
               title="Đang hoạt động"
@@ -593,21 +597,93 @@ const UserManagement = () => {
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={4}>
+          <Card>
+            <Statistic
+              title="Quản trị Bệnh viện"
+              value={stats.hospitalAdmin}
+              prefix={<IdcardOutlined style={{ color: '#d4380d' }} />}
+              valueStyle={{ color: '#d4380d' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
+          <Card>
+            <Statistic
+              title="Trưởng Khoa"
+              value={stats.departmentHead}
+              prefix={<IdcardOutlined style={{ color: '#fa8c16' }} />}
+              valueStyle={{ color: '#fa8c16' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
           <Card>
             <Statistic
               title="Bác sĩ"
               value={stats.doctors}
               prefix={<IdcardOutlined style={{ color: '#1890ff' }} />}
+              valueStyle={{ color: '#1890ff' }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
+        <Col xs={24} sm={12} lg={4}>
+          <Card>
+            <Statistic
+              title="Y tá"
+              value={stats.nurses}
+              prefix={<IdcardOutlined style={{ color: '#13c2c2' }} />}
+              valueStyle={{ color: '#13c2c2' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
+          <Card>
+            <Statistic
+              title="Dược sĩ"
+              value={stats.pharmacists}
+              prefix={<IdcardOutlined style={{ color: '#722ed1' }} />}
+              valueStyle={{ color: '#722ed1' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
+          <Card>
+            <Statistic
+              title="Kỹ thuật viên Lab"
+              value={stats.labTechnicians}
+              prefix={<IdcardOutlined style={{ color: '#eb2f96' }} />}
+              valueStyle={{ color: '#eb2f96' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
+          <Card>
+            <Statistic
+              title="Lễ tân"
+              value={stats.receptionists}
+              prefix={<IdcardOutlined style={{ color: '#faad14' }} />}
+              valueStyle={{ color: '#faad14' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
+          <Card>
+            <Statistic
+              title="Nhân viên Billing"
+              value={stats.billingStaff}
+              prefix={<IdcardOutlined style={{ color: '#52c41a' }} />}
+              valueStyle={{ color: '#52c41a' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
           <Card>
             <Statistic
               title="Bệnh nhân"
               value={stats.patients}
               prefix={<UserOutlined style={{ color: '#52c41a' }} />}
+              valueStyle={{ color: '#52c41a' }}
             />
           </Card>
         </Col>
@@ -625,15 +701,23 @@ const UserManagement = () => {
               prefix={<SearchOutlined />}
             />
             <Select
-              style={{ width: 150 }}
+              style={{ width: 220 }}
               placeholder="Vai trò"
               value={filterRole}
               onChange={setFilterRole}
+              dropdownMatchSelectWidth={false}
+              popupMatchSelectWidth={false}
+              listHeight={300}
             >
               <Option value="all">Tất cả vai trò</Option>
-              <Option value="SUPER_ADMIN">Super Admin</Option>
-              <Option value="ADMIN">Admin</Option>
+              <Option value="HOSPITAL_ADMIN">Quản trị Bệnh viện</Option>
+              <Option value="DEPARTMENT_HEAD">Trưởng Khoa</Option>
               <Option value="DOCTOR">Bác sĩ</Option>
+              <Option value="NURSE">Y tá</Option>
+              <Option value="PHARMACIST">Dược sĩ</Option>
+              <Option value="LAB_TECHNICIAN">Kỹ thuật viên Xét nghiệm</Option>
+              <Option value="RECEPTIONIST">Lễ tân</Option>
+              <Option value="BILLING_STAFF">Nhân viên Billing</Option>
               <Option value="PATIENT">Bệnh nhân</Option>
             </Select>
             <Select
@@ -694,7 +778,6 @@ const UserManagement = () => {
             </Descriptions.Item>
             <Descriptions.Item label="Vai trò">
               <Tag color={
-                selectedUser.role === 'SUPER_ADMIN' ? 'red' :
                 selectedUser.role === 'ADMIN' ? 'orange' :
                 selectedUser.role === 'DOCTOR' ? 'blue' : 'green'
               }>
@@ -830,14 +913,14 @@ const UserManagement = () => {
               }}
             >
               <option value="">-- Chọn vai trò --</option>
-              <option value="SUPER_ADMIN">Super Admin</option>
-              <option value="ADMIN">Admin</option>
+              <option value="HOSPITAL_ADMIN">Quản trị Bệnh viện</option>
+              <option value="DEPARTMENT_HEAD">Trưởng Khoa</option>
               <option value="DOCTOR">Bác sĩ</option>
               <option value="NURSE">Y tá</option>
               <option value="PHARMACIST">Dược sĩ</option>
-              <option value="LAB_TECHNICIAN">Kỹ thuật viên phòng lab</option>
+              <option value="LAB_TECHNICIAN">Kỹ thuật viên Xét nghiệm</option>
               <option value="RECEPTIONIST">Lễ tân</option>
-              <option value="BILLING_STAFF">Nhân viên thanh toán</option>
+              <option value="BILLING_STAFF">Nhân viên Billing</option>
               <option value="PATIENT">Bệnh nhân</option>
             </select>
           </Form.Item>
@@ -957,7 +1040,6 @@ const UserManagement = () => {
               key: 'role',
               render: (role) => (
                 <Tag color={
-                  role === 'SUPER_ADMIN' ? 'red' :
                   role === 'ADMIN' ? 'orange' :
                   role === 'DOCTOR' ? 'blue' : 'green'
                 }>

@@ -15,6 +15,7 @@ import SuperAdminRegister from './pages/SuperAdmin/Register';
 import SuperAdminDashboard from './pages/SuperAdmin/Dashboard';
 import PatientDashboard from './pages/PatientDashboard';
 import DoctorDashboard from './components/DoctorDashboard';
+import BillingStaffDashboard from './pages/BillingStaffDashboard';
 import PaymentConfirmation from './components/PaymentConfirmation';
 import ForgotPassword from './pages/SuperAdmin/ForgotPassword';
 import ResetPassword from './pages/SuperAdmin/ResetPassword';
@@ -103,6 +104,16 @@ function AppContent() {
         element={
           <ProtectedRoute requiredRole="DOCTOR">
             <DoctorDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Billing Staff Routes */}
+      <Route
+        path="/billing-staff/dashboard"
+        element={
+          <ProtectedRoute requiredRole="BILLING_STAFF">
+            <BillingStaffDashboard />
           </ProtectedRoute>
         }
       />
