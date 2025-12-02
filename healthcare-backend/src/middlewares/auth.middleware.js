@@ -1,3 +1,4 @@
+// src/middlewares/auth.middleware.js
 const { verifyAccessToken } = require('../utils/jwt');
 const User = require('../models/user.model');
 const { ROLES, hasPermission, ROLE_PERMISSIONS } = require('../constants/roles');
@@ -47,7 +48,6 @@ async function authenticate(req, res, next) {
     }
 
     // 🎯 KIỂM TRA TRẠNG THÁI TÀI KHOẢN
-    // 🔐 ALLOW: Always allow ACTIVE or if ALLOW_SELF_ACTIVATE flag is true
     const allowSelfActivate = (process.env.ALLOW_SELF_ACTIVATE || 'false').toLowerCase() === 'true';
     const isValidStatus = user.status === 'ACTIVE' || (user.status === 'PENDING_VERIFICATION' && allowSelfActivate);
     
@@ -95,12 +95,26 @@ async function authenticate(req, res, next) {
 }
 
 /**
- * 🎯 MIDDLEWARE KIỂM TRA PERMISSION
+ * 🎯 MIDDLEWARE KIỂM TRA PERMISSION - DEPRECATED
+ * ⚠️ SỬ DỤNG requirePermission TỪ rbac.middleware.js THAY THẾ
  */
 function requirePermission(permission) {
   return (req, res, next) => {
+    // 🔧 DEBUG: Log permission để phát hiện undefined
+    console.log('⚠️ [AUTH.MW] requirePermission called with:', { permission, path: req.path });
+    
     if (!req.user) {
       return next(new AppError('Yêu cầu xác thực', 401, ERROR_CODES.AUTH_INVALID_TOKEN));
+    }
+
+    // 🔧 FIX: Nếu permission undefined, log rõ ràng
+    if (!permission) {
+      console.error('❌ [AUTH.MW] Permission is undefined! Check route import.');
+      return next(new AppError(
+        'Lỗi cấu hình quyền - permission undefined', 
+        500, 
+        'PERMISSION_CONFIG_ERROR'
+      ));
     }
 
     if (!hasPermission(req.user.role, permission)) {
