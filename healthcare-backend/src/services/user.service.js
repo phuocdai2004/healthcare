@@ -1014,7 +1014,7 @@ async permanentlyDeleteUser(userId, currentUser) {
         department: doc.professionalInfo?.department || 'Khoa Nội',
         yearsOfExperience: doc.professionalInfo?.yearsOfExperience || 0,
         qualifications: doc.professionalInfo?.qualifications || [],
-        consultationFee: 5000, // Giá khám 5 nghìn
+        consultationFee: 150000, // Giá khám 5 nghìn
         status: doc.status // Thêm status để frontend biết bác sĩ chưa được kích hoạt
       }));
 
