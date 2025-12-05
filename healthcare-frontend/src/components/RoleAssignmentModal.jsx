@@ -29,11 +29,17 @@ const roleDescriptions = {
     description: 'Quyền cao nhất, quản lý toàn hệ thống',
     permissions: ['Tất cả quyền']
   },
-  ADMIN: {
+  HOSPITAL_ADMIN: {
     icon: <SafetyOutlined />,
     color: 'orange',
     description: 'Quản lý bệnh viện, nhân sự',
     permissions: ['Quản lý users', 'Quản lý phòng ban', 'Xem báo cáo']
+  },
+  DEPARTMENT_HEAD: {
+    icon: <TeamOutlined />,
+    color: 'volcano',
+    description: 'Trưởng khoa, quản lý chuyên môn',
+    permissions: ['Quản lý khoa', 'Phân công bác sĩ', 'Duyệt lịch']
   },
   DOCTOR: {
     icon: <MedicineBoxOutlined />,
@@ -47,15 +53,39 @@ const roleDescriptions = {
     description: 'Hỗ trợ bác sĩ, chăm sóc bệnh nhân',
     permissions: ['Chăm sóc bệnh nhân', 'Cập nhật hồ sơ', 'Lấy mẫu']
   },
+  PHARMACIST: {
+    icon: <MedicineBoxOutlined />,
+    color: 'purple',
+    description: 'Dược sĩ, quản lý thuốc',
+    permissions: ['Quản lý thuốc', 'Cấp phát đơn thuốc', 'Kiểm tra tương tác thuốc']
+  },
+  LAB_TECHNICIAN: {
+    icon: <MedicineBoxOutlined />,
+    color: 'magenta',
+    description: 'Kỹ thuật viên xét nghiệm',
+    permissions: ['Thực hiện xét nghiệm', 'Nhập kết quả', 'Xem yêu cầu XN']
+  },
   RECEPTIONIST: {
     icon: <PhoneOutlined />,
+    color: 'gold',
+    description: 'Lễ tân, tiếp nhận bệnh nhân',
+    permissions: ['Tiếp nhận', 'Đặt lịch hẹn', 'Tạo hồ sơ bệnh nhân']
+  },
+  BILLING_STAFF: {
+    icon: <SafetyOutlined />,
     color: 'green',
-    description: 'Tiếp nhân, đặt lịch hẹn',
-    permissions: ['Tiếp nhân', 'Đặt lịch hẹn', 'Xử lý hóa đơn']
+    description: 'Nhân viên thanh toán',
+    permissions: ['Tạo hóa đơn', 'Xử lý thanh toán', 'Xem báo cáo tài chính']
+  },
+  CUSTOMER_SUPPORT: {
+    icon: <PhoneOutlined />,
+    color: 'geekblue',
+    description: 'Nhân viên chăm sóc khách hàng',
+    permissions: ['Xem lịch hẹn', 'Xử lý phản hồi', 'Hỗ trợ bệnh nhân']
   },
   PATIENT: {
     icon: <UserOutlined />,
-    color: 'default',
+    color: 'lime',
     description: 'Bệnh nhân',
     permissions: ['Xem hồ sơ cá nhân', 'Xem lịch khám', 'Thanh toán']
   }

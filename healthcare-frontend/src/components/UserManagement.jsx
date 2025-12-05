@@ -571,6 +571,7 @@ const UserManagement = () => {
     labTechnicians: users.filter(u => u.role === 'LAB_TECHNICIAN').length,
     receptionists: users.filter(u => u.role === 'RECEPTIONIST').length,
     billingStaff: users.filter(u => u.role === 'BILLING_STAFF').length,
+    customerSupport: users.filter(u => u.role === 'CUSTOMER_SUPPORT').length,
     patients: users.filter(u => u.role === 'PATIENT').length
   };
 
@@ -718,6 +719,7 @@ const UserManagement = () => {
               <Option value="LAB_TECHNICIAN">Kỹ thuật viên Xét nghiệm</Option>
               <Option value="RECEPTIONIST">Lễ tân</Option>
               <Option value="BILLING_STAFF">Nhân viên Billing</Option>
+              <Option value="CUSTOMER_SUPPORT">Nhân viên CSKH</Option>
               <Option value="PATIENT">Bệnh nhân</Option>
             </Select>
             <Select
@@ -921,6 +923,7 @@ const UserManagement = () => {
               <option value="LAB_TECHNICIAN">Kỹ thuật viên Xét nghiệm</option>
               <option value="RECEPTIONIST">Lễ tân</option>
               <option value="BILLING_STAFF">Nhân viên Billing</option>
+              <option value="CUSTOMER_SUPPORT">Nhân viên CSKH</option>
               <option value="PATIENT">Bệnh nhân</option>
             </select>
           </Form.Item>

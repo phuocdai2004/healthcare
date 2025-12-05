@@ -16,6 +16,7 @@ import SuperAdminDashboard from './pages/SuperAdmin/Dashboard';
 import PatientDashboard from './pages/PatientDashboard';
 import DoctorDashboard from './components/DoctorDashboard';
 import BillingStaffDashboard from './pages/BillingStaffDashboard';
+import CSKHDashboard from './components/CSKHDashboard';
 import PaymentConfirmation from './components/PaymentConfirmation';
 import ForgotPassword from './pages/SuperAdmin/ForgotPassword';
 import ResetPassword from './pages/SuperAdmin/ResetPassword';
@@ -117,6 +118,16 @@ function AppContent() {
         element={
           <ProtectedRoute requiredRole="BILLING_STAFF">
             <BillingStaffDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Customer Support (CSKH) Routes */}
+      <Route
+        path="/cskh/dashboard"
+        element={
+          <ProtectedRoute requiredRole="CUSTOMER_SUPPORT">
+            <CSKHDashboard />
           </ProtectedRoute>
         }
       />
