@@ -22,6 +22,10 @@ const appointmentValidation = {
         'date.min': 'Thời gian hẹn phải ở tương lai',
         'any.required': 'Thời gian hẹn là bắt buộc'
       }),
+    appointmentTime: Joi.string().pattern(/^([01]?[0-9]|2[0-3]):[0-5][0-9]\s*-\s*([01]?[0-9]|2[0-3]):[0-5][0-9]$/).optional()
+      .messages({
+        'string.pattern.base': 'Định dạng giờ khám không hợp lệ (VD: 08:00 - 08:30)'
+      }),
     duration: Joi.number().integer().min(15).max(180).default(30),
     type: Joi.string().valid('CONSULTATION', 'FOLLOW_UP', 'CHECKUP', 'SURGERY', 'TEST', 'OTHER').required(),
     mode: Joi.string().valid('IN_PERSON', 'TELEMEDICINE', 'PHONE').default('IN_PERSON'),

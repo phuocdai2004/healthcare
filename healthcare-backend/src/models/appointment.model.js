@@ -23,6 +23,10 @@ const appointmentSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
+  appointmentTime: {
+    type: String,  // Format: "HH:mm" e.g., "09:30"
+    required: false
+  },
   duration: {
     type: Number,
     default: 30 // minutes

@@ -74,14 +74,23 @@ class AppointmentService {
       // 🎯 GỬI EMAIL THÔNG BÁO (SKIP IF SERVICE NOT AVAILABLE)
       try {
         if (notificationEmailService && notificationEmailService.sendAppointmentConfirmation) {
-          await notificationEmailService.sendAppointmentConfirmation({
+          console.log('📧 [EMAIL] Preparing to send confirmation email');
+          console.log('📧 [EMAIL] appointmentData.appointmentTime:', appointmentData.appointmentTime);
+          console.log('📧 [EMAIL] Full appointmentData:', JSON.stringify(appointmentData, null, 2));
+          
+          const emailData = {
             patientName: patient.name,
             patientEmail: patient.email,
             doctorName: doctor.name,
             appointmentDate: appointmentData.appointmentDate,
+            appointmentTime: appointmentData.appointmentTime || 'Chưa xác định',
             appointmentId: appointmentId,
-            clinic: appointmentData.clinic || 'Phòng khám'
-          });
+            clinicName: appointmentData.location || appointmentData.clinic || 'Phòng khám'
+          };
+          
+          console.log('📧 [EMAIL] Email data to send:', JSON.stringify(emailData, null, 2));
+          
+          await notificationEmailService.sendAppointmentConfirmation(emailData);
         }
       } catch (emailError) {
         console.warn('⚠️ [SERVICE] Failed to send appointment confirmation email:', emailError.message);

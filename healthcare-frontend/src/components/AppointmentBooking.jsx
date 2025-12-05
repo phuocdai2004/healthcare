@@ -109,7 +109,7 @@ const AppointmentBooking = (props) => {
       setLoading(true);
 
       const selectedDoctor = doctors.find(d => d.id === data.doc);
-      const slotStartTime = data.slot.split(' - ')[0];
+      const slotStartTime = data.slot.split(' - ')[0]; // "08:00"
       const appointmentDateTime = data.date.format('YYYY-MM-DD') + 'T' + slotStartTime + ':00';
 
       // Tạo appointment với trạng thái chờ thanh toán
@@ -117,6 +117,7 @@ const AppointmentBooking = (props) => {
         patientId: patientId,
         doctorId: data.doc,
         appointmentDate: appointmentDateTime,
+        appointmentTime: data.slot, // "08:00 - 08:30"
         type: 'CONSULTATION',
         mode: 'IN_PERSON',
         location: selectedDoctor?.department || 'Bệnh viện',
