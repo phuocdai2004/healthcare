@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Card, Form, Input, Switch, Button, Divider, message, Tabs, Row, Col, Space } from 'antd';
 import { LockOutlined, BellOutlined, EyeOutlined } from '@ant-design/icons';
-import axiosInstance from '../utils/axiosInstance';
+import apiClient from '../utils/api';
 
 /**
  * ⚙️ Trang Cài Đặt
@@ -26,7 +26,7 @@ const SettingsPage = () => {
 
     try {
       setLoading(true);
-      await axiosInstance.put('/api/auth/change-password', {
+      await apiClient.put('/api/auth/change-password', {
         oldPassword: values.oldPassword,
         newPassword: values.newPassword,
       });

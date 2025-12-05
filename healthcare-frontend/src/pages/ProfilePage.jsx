@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Form, Input, Button, Upload, Avatar, Space, message, Spin, Divider, Row, Col } from 'antd';
 import { UserOutlined, MailOutlined, PhoneOutlined, EnvironmentOutlined, CalendarOutlined } from '@ant-design/icons';
-import axiosInstance from '../utils/axiosInstance';
+import apiClient from '../utils/api';
 
 /**
  * 👤 Trang Hồ Sơ Cá Nhân
@@ -20,7 +20,7 @@ const ProfilePage = () => {
   const fetchUserProfile = async () => {
     try {
       setLoading(true);
-      const response = await axiosInstance.get('/api/users/profile');
+      const response = await apiClient.get('/api/users/profile');
       setUserData(response.data.data);
       form.setFieldsValue({
         firstName: response.data.data.personalInfo?.firstName,
@@ -50,7 +50,7 @@ const ProfilePage = () => {
         phone: values.phone,
       };
 
-      await axiosInstance.put('/api/users/profile', payload);
+      await apiClient.put('/api/users/profile', payload);
       message.success('Cập nhật hồ sơ thành công!');
       fetchUserProfile();
     } catch (error) {
