@@ -52,13 +52,7 @@ async function register(req, res, next) {
         });
       }
 
-      // Kiểm tra quyền SELF_REGISTER cho GUEST
-      if (!hasPermission(ROLES.GUEST, PERMISSIONS.SELF_REGISTER)) {
-        return res.status(403).json({ 
-          success: false,
-          error: 'Tính năng đăng ký đang bị tạm khóa' 
-        });
-      }
+      // SELF_REGISTER được phép cho tất cả người dùng chưa xác thực
     }
 
     // Gọi service đăng ký
@@ -118,13 +112,7 @@ async function login(req, res, next) {
 
     console.log('🔐 Extracted fields:', { email, password: password ? '***' : undefined, twoFACode });
 
-    // Kiểm tra quyền LOGIN cơ bản (có thể dựa trên IP/rate limiting sau)
-    if (!hasPermission(ROLES.GUEST, PERMISSIONS.LOGIN)) {
-      return res.status(403).json({ 
-        success: false,
-        error: 'Tính năng đăng nhập tạm thời bị vô hiệu hóa' 
-      });
-    }
+    // LOGIN được phép cho tất cả người dùng chưa xác thực (rate limiting được xử lý bên ngoài)
 
     const result = await authService.login({
       email,

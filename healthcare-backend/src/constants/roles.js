@@ -28,7 +28,6 @@ const ROLES = Object.freeze({
   
   // ===== NGƯỜI DÙNG =====
   PATIENT: 'PATIENT',                // Bệnh nhân
-  GUEST: 'GUEST',                    // Khách (chưa đăng nhập)
 });
 
 const PERMISSIONS = Object.freeze({
@@ -254,12 +253,6 @@ const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.CANCEL_APPOINTMENTS,  // Hủy lịch của bản thân
     PERMISSIONS.VIEW_BILLS,           // Chỉ xem của bản thân
   ],
-
-  [ROLES.GUEST]: [
-    // Khách (chưa đăng nhập)
-    PERMISSIONS.LOGIN,
-    PERMISSIONS.SELF_REGISTER,        // Tự đăng ký tài khoản bệnh nhân
-  ],
 });
 
 /**
@@ -278,7 +271,6 @@ const ROLE_HIERARCHY = Object.freeze([
   ROLES.BILLING_STAFF,        // Kế toán
   ROLES.RECEPTIONIST,         // Lễ tân
   ROLES.PATIENT,              // Bệnh nhân
-  ROLES.GUEST,                // Khách
 ]);
 
 /**
