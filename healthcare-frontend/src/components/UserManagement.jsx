@@ -681,6 +681,16 @@ const UserManagement = () => {
         <Col xs={24} sm={12} lg={4}>
           <Card>
             <Statistic
+              title="Nhân viên CSKH"
+              value={stats.customerSupport}
+              prefix={<IdcardOutlined style={{ color: '#2f54eb' }} />}
+              valueStyle={{ color: '#2f54eb' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={4}>
+          <Card>
+            <Statistic
               title="Bệnh nhân"
               value={stats.patients}
               prefix={<UserOutlined style={{ color: '#52c41a' }} />}
