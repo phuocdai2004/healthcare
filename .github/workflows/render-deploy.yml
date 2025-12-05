@@ -46,66 +46,21 @@ jobs:
           VITE_API_URL: https://healthcare-backend.onrender.com
 
   # ===================================
-  # BUILD DOCKER IMAGES
-  # ===================================
-  build-docker:
-    needs: test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Build Backend Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./healthcare-backend
-          file: ./healthcare-backend/Dockerfile
-          push: false
-          tags: healthcare-backend:latest
-          outputs: type=docker,dest=/tmp/backend-image.tar
-
-      - name: Build Frontend Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: ./healthcare-frontend
-          file: ./healthcare-frontend/Dockerfile
-          push: false
-          tags: healthcare-frontend:latest
-          outputs: type=docker,dest=/tmp/frontend-image.tar
-
-      - name: Upload Backend image
-        uses: actions/upload-artifact@v4
-        with:
-          name: backend-docker-image
-          path: /tmp/backend-image.tar
-
-      - name: Upload Frontend image
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-docker-image
-          path: /tmp/frontend-image.tar
-
-  # ===================================
   # DEPLOY BACKEND TO RENDER
   # ===================================
   deploy-backend:
-    needs: [test, build-docker]
+    needs: test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Deploy Backend to Render
-        uses: johnbeynon/render-deploy-action@v0.0.8
-        with:
-          service-id: ${{ secrets.RENDER_BACKEND_SERVICE_ID }}
-          api-key: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          curl -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_BACKEND_SERVICE_ID }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json"
+          echo "✅ Backend deployment triggered"
 
       - name: Wait for Backend deployment
-        run: sleep 60
+        run: sleep 90
 
       - name: Health check Backend
         run: |
@@ -128,22 +83,20 @@ jobs:
     needs: deploy-backend
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Deploy Frontend to Render
-        uses: johnbeynon/render-deploy-action@v0.0.8
-        with:
-          service-id: ${{ secrets.RENDER_FRONTEND_SERVICE_ID }}
-          api-key: ${{ secrets.RENDER_API_KEY }}
+        run: |
+          curl -X POST "https://api.render.com/v1/services/${{ secrets.RENDER_FRONTEND_SERVICE_ID }}/deploys" \
+            -H "Authorization: Bearer ${{ secrets.RENDER_API_KEY }}" \
+            -H "Content-Type: application/json"
+          echo "✅ Frontend deployment triggered"
 
       - name: Wait for Frontend deployment
-        run: sleep 60
+        run: sleep 90
 
       - name: Health check Frontend
         run: |
           for i in {1..10}; do
-            response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.RENDER_FRONTEND_URL }}/health || echo "000")
+            response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.RENDER_FRONTEND_URL }} || echo "000")
             if [ "$response" = "200" ]; then
               echo "✅ Frontend is healthy!"
               exit 0
