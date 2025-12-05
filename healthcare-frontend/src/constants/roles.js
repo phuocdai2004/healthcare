@@ -7,6 +7,7 @@ export const ROLES = {
   LAB_TECHNICIAN: 'LAB_TECHNICIAN',
   RECEPTIONIST: 'RECEPTIONIST',
   BILLING_STAFF: 'BILLING_STAFF',
+  CUSTOMER_SUPPORT: 'CUSTOMER_SUPPORT',
   PATIENT: 'PATIENT'
 };
 
@@ -19,6 +20,7 @@ export const ROLE_LABELS = {
   LAB_TECHNICIAN: 'Kỹ thuật viên Xét nghiệm',
   RECEPTIONIST: 'Lễ tân',
   BILLING_STAFF: 'Nhân viên Billing',
+  CUSTOMER_SUPPORT: 'Nhân viên CSKH',
   PATIENT: 'Bệnh nhân'
 };
 
@@ -31,6 +33,7 @@ export const ROLE_COLORS = {
   LAB_TECHNICIAN: 'magenta',
   RECEPTIONIST: 'gold',
   BILLING_STAFF: 'green',
+  CUSTOMER_SUPPORT: 'geekblue',
   PATIENT: 'lime'
 };
 

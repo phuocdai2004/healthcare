@@ -10,6 +10,12 @@ const patientSchema = new mongoose.Schema({
     unique: true
   },
   
+  // Ảnh đại diện (base64 hoặc URL)
+  avatar: {
+    type: String,
+    default: null
+  },
+  
   // Thông tin bệnh nhân
   patientId: {
     type: String,

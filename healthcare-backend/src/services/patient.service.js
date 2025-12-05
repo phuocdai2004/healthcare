@@ -414,6 +414,35 @@ class PatientService {
       throw error;
     }
   }
+
+  /**
+   * 🎯 CẬP NHẬT ẢNH ĐẠI DIỆN BỆNH NHÂN
+   */
+  async updatePatientAvatar(userId, avatar) {
+    try {
+      console.log('📸 [SERVICE] Updating avatar for userId:', userId);
+
+      // Tìm patient bằng userId
+      const patient = await Patient.findOne({ userId });
+      
+      if (!patient) {
+        throw new AppError('Không tìm thấy bệnh nhân', 404, ERROR_CODES.PATIENT_NOT_FOUND);
+      }
+
+      // Cập nhật avatar
+      patient.avatar = avatar;
+      patient.updatedAt = new Date();
+      await patient.save();
+
+      console.log('✅ [SERVICE] Avatar updated successfully');
+      
+      return patient;
+
+    } catch (error) {
+      console.error('❌ [SERVICE] Update avatar failed:', error.message);
+      throw error;
+    }
+  }
 }
 
 module.exports = new PatientService();

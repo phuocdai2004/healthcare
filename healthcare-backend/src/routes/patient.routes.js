@@ -57,11 +57,18 @@ router.get(
 // 🎯 CẬP NHẬT THÔNG TIN NHÂN KHẨU
 router.put(
   '/:patientId/demographics',
-  requireRole(ROLES.DOCTOR, ROLES.NURSE, ROLES.HOSPITAL_ADMIN, ROLES.DEPARTMENT_HEAD),
-  requirePermission(PERMISSIONS.PATIENT_UPDATE),
+  requireRole(ROLES.DOCTOR, ROLES.NURSE, ROLES.HOSPITAL_ADMIN, ROLES.DEPARTMENT_HEAD, ROLES.PATIENT),
   requirePatientDataAccess('patientId'),
   validateBody(patientValidation.updateDemographics),
   patientController.updatePatientDemographics
+);
+
+// 🎯 CẬP NHẬT ẢNH ĐẠI DIỆN
+router.put(
+  '/:patientId/avatar',
+  requireRole(ROLES.DOCTOR, ROLES.NURSE, ROLES.HOSPITAL_ADMIN, ROLES.DEPARTMENT_HEAD, ROLES.PATIENT),
+  requirePatientDataAccess('patientId'),
+  patientController.updatePatientAvatar
 );
 
 // 🎯 NHẬP VIỆN

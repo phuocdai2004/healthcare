@@ -25,6 +25,7 @@ const ROLES = Object.freeze({
   // ===== HÀNH CHÍNH =====
   RECEPTIONIST: 'RECEPTIONIST',      // Lễ tân
   BILLING_STAFF: 'BILLING_STAFF',    // Nhân viên kế toán
+  CUSTOMER_SUPPORT: 'CUSTOMER_SUPPORT', // Nhân viên CSKH
   
   // ===== NGƯỜI DÙNG =====
   PATIENT: 'PATIENT',                // Bệnh nhân
@@ -117,6 +118,11 @@ const PERMISSIONS = Object.freeze({
   VIEW_REPORTS: 'REPORT.VIEW',
   GENERATE_REPORTS: 'REPORT.GENERATE',
   EXPORT_REPORTS: 'REPORT.EXPORT',
+
+  // ===== PHẢN HỒI & HỖ TRỢ =====
+  VIEW_FEEDBACK: 'FEEDBACK.VIEW',
+  MANAGE_FEEDBACK: 'FEEDBACK.MANAGE',
+  RESPOND_FEEDBACK: 'FEEDBACK.RESPOND',
 
   // ===== QUYỀN KHẨN CẤP ===== (Y tế đặc thù)
   EMERGENCY_ACCESS: 'EMERGENCY.ACCESS', // Truy cập khẩn trong tình huống cấp cứu
@@ -253,6 +259,18 @@ const ROLE_PERMISSIONS = Object.freeze({
     PERMISSIONS.CANCEL_APPOINTMENTS,  // Hủy lịch của bản thân
     PERMISSIONS.VIEW_BILLS,           // Chỉ xem của bản thân
   ],
+
+  [ROLES.CUSTOMER_SUPPORT]: [
+    // Nhân viên Chăm sóc Khách hàng
+    PERMISSIONS.LOGIN, PERMISSIONS.LOGOUT,
+    PERMISSIONS.VIEW_USER,            // Xem thông tin người dùng (cơ bản)
+    PERMISSIONS.PATIENT_VIEW,         // Xem thông tin bệnh nhân (cơ bản)
+    PERMISSIONS.VIEW_APPOINTMENTS,    // Xem lịch hẹn
+    PERMISSIONS.CREATE_APPOINTMENTS,  // Tạo lịch hẹn cho bệnh nhân
+    PERMISSIONS.UPDATE_APPOINTMENTS,  // Cập nhật lịch hẹn
+    PERMISSIONS.VIEW_FEEDBACK,        // Xem phản hồi
+    PERMISSIONS.MANAGE_FEEDBACK,      // Quản lý phản hồi
+  ],
 });
 
 /**
@@ -269,6 +287,7 @@ const ROLE_HIERARCHY = Object.freeze([
   ROLES.NURSE,                // Y tá
   ROLES.LAB_TECHNICIAN,       // Kỹ thuật viên
   ROLES.BILLING_STAFF,        // Kế toán
+  ROLES.CUSTOMER_SUPPORT,     // Nhân viên CSKH
   ROLES.RECEPTIONIST,         // Lễ tân
   ROLES.PATIENT,              // Bệnh nhân
 ]);

@@ -109,7 +109,7 @@ const PatientDashboard = () => {
 
         <Content style={{ padding: '24px', minHeight: 'calc(100vh - 100px)' }}>
           <Spin spinning={loading} delay={500}>
-            {selectedKey === '1' && <PatientPersonalInfo patientData={data.patient} />}
+            {selectedKey === '1' && <PatientPersonalInfo patientData={data.patient} onUpdate={fetchAllData} />}
             {selectedKey === '2' && <MedicalRecordsSection records={data.records} patient={data.patient} />}
             {selectedKey === '3' && <AppointmentsSection appointments={data.appointments} patient={data.patient} prescriptions={data.prescriptions} bills={data.bills} />}
             {selectedKey === '4' && <PrescriptionsSection prescriptions={data.prescriptions} appointments={data.appointments} records={data.records} />}

@@ -327,6 +327,41 @@ class PatientController {
       next(error);
     }
   }
+
+  /**
+   * 🎯 CẬP NHẬT ẢNH ĐẠI DIỆN BỆNH NHÂN
+   */
+  async updatePatientAvatar(req, res, next) {
+    try {
+      const userId = req.params.patientId;
+      const { avatar } = req.body;
+      
+      console.log('📸 [PATIENT] Updating avatar for userId:', userId);
+
+      if (!avatar) {
+        throw new AppError('Vui lòng cung cấp ảnh đại diện', 400, ERROR_CODES.VALIDATION_ERROR);
+      }
+
+      const updatedPatient = await patientService.updatePatientAvatar(userId, avatar);
+
+      // 🎯 AUDIT LOG
+      await auditLog(AUDIT_ACTIONS.PATIENT_UPDATE, {
+        resource: 'Patient',
+        resourceId: userId,
+        category: 'AVATAR',
+        metadata: { action: 'avatar_updated' }
+      })(req, res, () => {});
+
+      res.json({
+        success: true,
+        message: 'Cập nhật ảnh đại diện thành công',
+        data: updatedPatient
+      });
+
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 module.exports = new PatientController();
