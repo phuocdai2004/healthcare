@@ -338,12 +338,26 @@ const UserManagement = () => {
         role: values.role
       };
 
-      // Add professional info for medical roles - must not use default "N/A" or "General"
+      // Add professional info for medical roles - validate required fields
       if (medicalRoles.includes(values.role)) {
+        // Validate required fields for medical roles
+        if (!values.licenseNumber?.trim()) {
+          message.error('Số giấy phép hành nghề là bắt buộc cho vai trò này');
+          return;
+        }
+        if (!values.specialization?.trim()) {
+          message.error('Chuyên khoa là bắt buộc cho vai trò này');
+          return;
+        }
+        if (!values.department?.trim()) {
+          message.error('Khoa/phòng là bắt buộc cho vai trò này');
+          return;
+        }
+        
         userData.professionalInfo = {
-          licenseNumber: values.licenseNumber || '',
-          specialization: values.specialization || '',
-          department: values.department || ''
+          licenseNumber: values.licenseNumber.trim(),
+          specialization: values.specialization.trim(),
+          department: values.department.trim()
         };
       }
 

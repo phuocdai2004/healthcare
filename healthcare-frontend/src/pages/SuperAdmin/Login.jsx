@@ -27,6 +27,12 @@ const SuperAdminLogin = () => {
           navigate('/patient/dashboard');
         } else if (userData.role === 'DOCTOR') {
           navigate('/doctor/dashboard');
+        } else if (userData.role === 'CUSTOMER_SUPPORT') {
+          navigate('/cskh/dashboard');
+        } else if (userData.role === 'BILLING_STAFF') {
+          navigate('/billing-staff/dashboard');
+        } else if (userData.role === 'RECEPTIONIST') {
+          navigate('/superadmin/dashboard'); // Receptionist dùng chung dashboard admin
         } else {
           navigate('/superadmin/dashboard');
         }

@@ -96,20 +96,22 @@ jobs:
           echo "✅ Backend deployment triggered"
 
       - name: Wait for Backend deployment
-        run: sleep 90
+        run: sleep 120
 
       - name: Health check Backend
         run: |
-          for i in {1..10}; do
+          for i in {1..15}; do
+            echo "🔍 Checking backend health at: ${{ secrets.RENDER_BACKEND_URL }}/health"
             response=$(curl -s -o /dev/null -w "%{http_code}" ${{ secrets.RENDER_BACKEND_URL }}/health || echo "000")
+            echo "📊 Response code: $response"
             if [ "$response" = "200" ]; then
               echo "✅ Backend is healthy!"
               exit 0
             fi
-            echo "⏳ Waiting for backend... (attempt $i/10)"
-            sleep 30
+            echo "⏳ Waiting for backend... (attempt $i/15)"
+            sleep 40
           done
-          echo "❌ Backend health check failed"
+          echo "❌ Backend health check failed after 15 attempts"
           exit 1
 
   # ===================================
