@@ -46,10 +46,46 @@ jobs:
           VITE_API_URL: https://healthcare-backend.onrender.com
 
   # ===================================
+  # BUILD DOCKER IMAGES
+  # ===================================
+  build-docker:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./healthcare-backend
+          file: ./healthcare-backend/Dockerfile
+          push: false
+          tags: healthcare-backend:latest
+          load: true
+
+      - name: Build Frontend Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./healthcare-frontend
+          file: ./healthcare-frontend/Dockerfile
+          push: false
+          tags: healthcare-frontend:latest
+          load: true
+
+      - name: Verify Docker images
+        run: |
+          echo "✅ Docker images built successfully:"
+          docker images | grep healthcare
+
+  # ===================================
   # DEPLOY BACKEND TO RENDER
   # ===================================
   deploy-backend:
-    needs: test
+    needs: build-docker
     runs-on: ubuntu-latest
     steps:
       - name: Deploy Backend to Render
