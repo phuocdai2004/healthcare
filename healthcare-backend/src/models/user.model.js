@@ -80,6 +80,10 @@ const UserSchema = new mongoose.Schema({
     userAgent: String,
     at: Date
   },
+
+  // Password reset
+  resetPasswordToken: String,
+  resetPasswordExpires: Date,
   
   profile: {
     firstName: String,

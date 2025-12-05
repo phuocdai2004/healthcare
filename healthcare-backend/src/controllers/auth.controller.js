@@ -382,6 +382,74 @@ async function verifyEmail(req, res, next) {
   }
 }
 
+/**
+ * [POST] /api/auth/forgot-password
+ * Gửi email reset mật khẩu
+ */
+async function forgotPassword(req, res, next) {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Email là bắt buộc' 
+      });
+    }
+
+    await authService.forgotPassword(email);
+
+    res.json({ 
+      success: true,
+      message: 'Nếu email tồn tại trong hệ thống, bạn sẽ nhận được link đặt lại mật khẩu.' 
+    });
+
+  } catch (err) {
+    // Không tiết lộ email có tồn tại hay không
+    res.json({ 
+      success: true,
+      message: 'Nếu email tồn tại trong hệ thống, bạn sẽ nhận được link đặt lại mật khẩu.' 
+    });
+  }
+}
+
+/**
+ * [POST] /api/auth/reset-password
+ * Đặt lại mật khẩu với token
+ */
+async function resetPassword(req, res, next) {
+  try {
+    const { token, password, confirmPassword } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Token và mật khẩu mới là bắt buộc' 
+      });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({ 
+        success: false,
+        error: 'Mật khẩu xác nhận không khớp' 
+      });
+    }
+
+    await authService.resetPassword(token, password);
+
+    res.json({ 
+      success: true,
+      message: 'Mật khẩu đã được đặt lại thành công. Vui lòng đăng nhập.' 
+    });
+
+  } catch (err) {
+    res.status(400).json({ 
+      success: false,
+      error: err.message 
+    });
+  }
+}
+
 module.exports = {
   register,
   login,
@@ -391,4 +459,6 @@ module.exports = {
   generate2FA,
   enable2FA,
   verifyEmail,
+  forgotPassword,
+  resetPassword,
 };

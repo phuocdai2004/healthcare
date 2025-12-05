@@ -410,6 +410,82 @@ async function verifyEmailAndActivate(email) {
   return user;
 }
 
+/**
+ * QUÊN MẬT KHẨU - Gửi email reset
+ * @param {string} email - Email người dùng
+ */
+async function forgotPassword(email) {
+  const user = await User.findOne({ email });
+  
+  if (!user) {
+    // Không tiết lộ email có tồn tại không
+    return;
+  }
+
+  // Tạo reset token
+  const resetToken = randomTokenHex(32);
+  const resetTokenHash = sha256(resetToken);
+  
+  // Lưu token vào user (hết hạn sau 1 giờ)
+  user.resetPasswordToken = resetTokenHash;
+  user.resetPasswordExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  await user.save();
+
+  // Gửi email
+  const { sendEmail } = require('../utils/email');
+  const resetUrl = `${process.env.CLIENT_URL}/superadmin/reset-password?token=${resetToken}`;
+  
+  await sendEmail({
+    to: email,
+    subject: '🔐 Đặt lại mật khẩu - Healthcare System',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #0099cc;">Yêu cầu đặt lại mật khẩu</h2>
+        <p>Xin chào <strong>${user.name}</strong>,</p>
+        <p>Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản Healthcare System.</p>
+        <p>Nhấp vào nút bên dưới để đặt lại mật khẩu:</p>
+        <a href="${resetUrl}" style="display: inline-block; padding: 12px 24px; background-color: #0099cc; color: white; text-decoration: none; border-radius: 8px; margin: 16px 0;">
+          Đặt lại mật khẩu
+        </a>
+        <p style="color: #666; font-size: 14px;">Link này sẽ hết hạn sau 1 giờ.</p>
+        <p style="color: #666; font-size: 14px;">Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này.</p>
+        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+        <p style="color: #999; font-size: 12px;">© 2025 Healthcare System</p>
+      </div>
+    `
+  });
+
+  await log(user._id, 'PASSWORD_RESET_REQUESTED', { email });
+}
+
+/**
+ * ĐẶT LẠI MẬT KHẨU với token
+ * @param {string} token - Reset token
+ * @param {string} newPassword - Mật khẩu mới
+ */
+async function resetPassword(token, newPassword) {
+  const tokenHash = sha256(token);
+  
+  const user = await User.findOne({
+    resetPasswordToken: tokenHash,
+    resetPasswordExpires: { $gt: new Date() }
+  });
+
+  if (!user) {
+    throw new Error('Token không hợp lệ hoặc đã hết hạn');
+  }
+
+  // Hash mật khẩu mới
+  user.passwordHash = await hashPassword(newPassword);
+  user.resetPasswordToken = undefined;
+  user.resetPasswordExpires = undefined;
+  await user.save();
+
+  await log(user._id, 'PASSWORD_RESET_COMPLETED', { email: user.email });
+
+  return user;
+}
+
 module.exports = {
   registerUser,
   login,
@@ -421,4 +497,6 @@ module.exports = {
   enable2FAForUser,
   disable2FAForUser,
   verifyEmailAndActivate,
+  forgotPassword,
+  resetPassword,
 };
