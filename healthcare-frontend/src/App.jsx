@@ -19,6 +19,9 @@ import BillingStaffDashboard from './pages/BillingStaffDashboard';
 import PaymentConfirmation from './components/PaymentConfirmation';
 import ForgotPassword from './pages/SuperAdmin/ForgotPassword';
 import ResetPassword from './pages/SuperAdmin/ResetPassword';
+import NotFoundPage from './pages/NotFoundPage';
+import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
 
 // Ant Design Theme Configuration
 const theme = {
@@ -128,11 +131,33 @@ function AppContent() {
         }
       />
 
+      {/* Profile & Settings Routes */}
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+
       {/* Redirect /login to superadmin login */}
       <Route path="/login" element={<Navigate to="/superadmin/login" replace />} />
 
-      {/* Catch all - redirect to home */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* 404 Not Found Page */}
+      <Route path="/404" element={<NotFoundPage />} />
+
+      {/* Catch all - redirect to 404 */}
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }
